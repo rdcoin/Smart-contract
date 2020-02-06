@@ -432,7 +432,7 @@ func TestOutsideDeviation(t *testing.T) {
 	}
 }
 
-func TestFeedURLs(t *testing.T) {
+func TestExtractFeedURLs(t *testing.T) {
 	store, cleanup := cltest.NewStore(t)
 	defer cleanup()
 
@@ -484,7 +484,7 @@ func TestFeedURLs(t *testing.T) {
 			for _, urlString := range test.expectation {
 				expectation = append(expectation, cltest.MustParseURL(urlString))
 			}
-			val, err := services.FeedURLs(initiatorParams, store.ORM)
+			val, err := services.ExtractFeedURLs(initiatorParams, store.ORM)
 			require.NoError(t, err)
 			assert.Equal(t, val, expectation)
 		})
