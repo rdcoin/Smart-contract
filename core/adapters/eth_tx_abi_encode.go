@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 
 	strpkg "chainlink/core/store"
 	"chainlink/core/store/models"
@@ -23,12 +22,8 @@ const evmWordSize = 32
 // EthTxABIEncode holds the Address to send the result to and the FunctionABI
 // to use for encoding arguments.
 type EthTxABIEncode struct {
-	// Ethereum address of the contract this task calls
-	Address common.Address `json:"address"`
 	// ABI of contract function this task calls
 	FunctionABI abi.Method `json:"functionABI"`
-	GasPrice    *utils.Big `json:"gasPrice" gorm:"type:numeric"`
-	GasLimit    uint64     `json:"gasLimit"`
 }
 
 // UnmarshalJSON for custom JSON unmarshal that is strict, i.e. doesn't
@@ -37,26 +32,20 @@ type EthTxABIEncode struct {
 // ideas about what parts of the ABI we use for encoding data.)
 func (etx *EthTxABIEncode) UnmarshalJSON(data []byte) error {
 	var fields struct {
-		Address     common.Address
 		FunctionABI struct {
 			Name   string
 			Inputs abi.Arguments
 		}
-		GasPrice *utils.Big
-		GasLimit uint64
 	}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
+	//decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&fields); err != nil {
 		return err
 	}
 
-	etx.Address = fields.Address
-	etx.FunctionABI.Name = fields.FunctionABI.Name
+	etx.FunctionABI.RawName = fields.FunctionABI.Name
 	etx.FunctionABI.Inputs = fields.FunctionABI.Inputs
-	etx.GasPrice = fields.GasPrice
-	etx.GasLimit = fields.GasLimit
 	return nil
 }
 
@@ -64,18 +53,19 @@ func (etx *EthTxABIEncode) UnmarshalJSON(data []byte) error {
 // is not currently pending. Then it confirms the transaction was confirmed on
 // the blockchain.
 func (etx *EthTxABIEncode) Perform(input models.RunInput, store *strpkg.Store) models.RunOutput {
-	if !store.TxManager.Connected() {
-		return models.NewRunOutputPendingConnection()
+	data, err := etx.abiEncode(&input)
+	if err != nil {
+		err = errors.Wrap(err, "while constructing EthTxABIEncode data")
+		return models.NewRunOutputError(err)
 	}
-	if !input.Status().PendingConfirmations() {
-		data, err := etx.abiEncode(&input)
-		if err != nil {
-			err = errors.Wrap(err, "while constructing EthTxABIEncode data")
-			return models.NewRunOutputError(err)
-		}
-		return createTxRunResult(etx.Address, etx.GasPrice, etx.GasLimit, data, input, store)
+
+	hexData := hex.EncodeToString(data)
+
+	output, err := models.JSON{}.Add("result", hexData)
+	if err != nil {
+		return models.NewRunOutputError(err)
 	}
-	return ensureTxRunResult(input, store)
+	return models.NewRunOutputComplete(output)
 }
 
 // abiEncode ABI-encodes the arguments passed in a RunResult's result field
@@ -90,12 +80,6 @@ func (etx *EthTxABIEncode) abiEncode(input *models.RunInput) ([]byte, error) {
 
 // abiEncode ABI-encodes the arguments in args according to fnABI.
 func abiEncode(fnABI *abi.Method, args map[string]interface{}) ([]byte, error) {
-	if len(fnABI.Inputs) != len(args) {
-		return nil, errors.Errorf(
-			"json result has wrong length. should have %v entries, one for each argument",
-			len(fnABI.Inputs))
-	}
-
 	encodedStaticPartSize := 0
 	for _, input := range fnABI.Inputs {
 		encodedStaticPartSize += staticSize(&input.Type)
@@ -293,9 +277,6 @@ func encStatic(typ *abi.Type, jval interface{}, name string) ([]byte, error) {
 		}
 		return padRight(bytes, evmWordSize), nil
 	case abi.IntTy:
-		if _, ok := jval.(float64); ok && typ.Size > 48 {
-			return nil, errors.Errorf("argument %s is a json number which isn't suitable for storing integers greater than 2**53", name)
-		}
 		n, err := bigIntFromJSON(jval, name)
 		if err != nil {
 			return nil, err
@@ -306,9 +287,6 @@ func encStatic(typ *abi.Type, jval interface{}, name string) ([]byte, error) {
 		}
 		return encoded, nil
 	case abi.UintTy:
-		if _, ok := jval.(float64); ok && typ.Size > 48 {
-			return nil, errors.Errorf("argument %s is a json number which isn't suitable for storing integers greater than 2**53", name)
-		}
 		n, err := bigIntFromJSON(jval, name)
 		if err != nil {
 			return nil, err
