@@ -258,11 +258,11 @@ func ExtractFeedURLs(feeds models.Feeds, orm *orm.ORM) ([]*url.URL, error) {
 		var bridgeURL *url.URL
 		var err error
 
-		switch entry.(type) {
+		switch feed := entry.(type) {
 		case string: // feed url - ex: "http://example.com"
-			bridgeURL, err = url.ParseRequestURI(entry.(string))
+			bridgeURL, err = url.ParseRequestURI(feed)
 		case map[string]interface{}: // named feed - ex: {"bridge": "bridgeName"}
-			bridgeName := entry.(map[string]interface{})["bridge"].(string)
+			bridgeName := feed["bridge"].(string)
 			bridgeURL, err = GetBridgeURLFromName(bridgeName, orm) // XXX: currently an n query
 		default:
 			err = errors.New("unable to extract feed URLs from json")
