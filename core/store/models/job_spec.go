@@ -215,7 +215,7 @@ type InitiatorParams struct {
 	Topics     Topics            `json:"topics,omitempty" gorm:"type:text"`
 
 	RequestData     JSON     `json:"requestData,omitempty" gorm:"type:text"`
-	Feeds           JSON     `json:"feeds,omitempty" gorm:"type:text"`
+	Feeds           Feeds    `json:"feeds,omitempty" gorm:"type:text"`
 	Threshold       float32  `json:"threshold,omitempty" gorm:"type:float"`
 	Precision       int32    `json:"precision,omitempty" gorm:"type:smallint"`
 	PollingInterval Duration `json:"pollingInterval,omitempty"`
@@ -287,6 +287,8 @@ func (i Initiator) IsLogInitiated() bool {
 	return i.Type == InitiatorEthLog || i.Type == InitiatorRunLog ||
 		i.Type == InitiatorServiceAgreementExecutionLog
 }
+
+type Feeds = JSON
 
 // TaskSpec is the definition of work to be carried out. The
 // Type will be an adapter, and the Params will contain any
