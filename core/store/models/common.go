@@ -128,6 +128,15 @@ type JSON struct {
 	gjson.Result
 }
 
+// NewJSON marshals the given entity into the JSON type.
+func NewJSON(obj interface{}) (JSON, error) {
+	buf, err := json.Marshal(obj)
+	if err != nil {
+		return JSON{}, err
+	}
+	return JSON{gjson.ParseBytes(buf)}, nil
+}
+
 // Value returns this instance serialized for database storage.
 func (j JSON) Value() (driver.Value, error) {
 	s := j.String()

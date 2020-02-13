@@ -327,6 +327,13 @@ func WebURL(t testing.TB, unparsed string) models.WebURL {
 	return models.WebURL(*parsed)
 }
 
+// MustJSON creates JSON from the given entity.
+func MustJSON(t *testing.T, obj interface{}) models.JSON {
+	ret, err := models.NewJSON(obj)
+	require.NoError(t, err, "create models.JSON from object")
+	return ret
+}
+
 // JSONFromString create JSON from given body and arguments
 func JSONFromString(t testing.TB, body string, args ...interface{}) models.JSON {
 	return JSONFromBytes(t, []byte(fmt.Sprintf(body, args...)))

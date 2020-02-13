@@ -981,7 +981,7 @@ func TestIntegration_FluxMonitor_NewRound(t *testing.T) {
 	var job models.JobSpec
 	err := json.Unmarshal(buffer, &job)
 	require.NoError(t, err)
-	job.Initiators[0].InitiatorParams.Feeds = cltest.JSONFromString(t, fmt.Sprintf(`["%s"]`, mockServer.URL))
+	job.Initiators[0].InitiatorParams.Feeds = cltest.MustJSON(t, []string{mockServer.URL})
 
 	j := cltest.CreateJobSpecViaWeb(t, app, job)
 	_ = cltest.WaitForRuns(t, j, app.Store, 0)
