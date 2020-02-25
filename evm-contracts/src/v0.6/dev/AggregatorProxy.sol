@@ -1,6 +1,7 @@
 pragma solidity 0.6.2;
 
 import "./AggregatorInterface.sol";
+import "./Disableable.sol";
 import "../Owned.sol";
 import "./Whitelisted.sol";
 
@@ -8,9 +9,9 @@ import "./Whitelisted.sol";
  * @title A trusted proxy for updating where current answers are read from
  * @notice This contract provides a consistent address for the
  * CurrentAnwerInterface but delegates where it reads from to the owner, who is
- * trusted to update it.
+ * trusted to update it and disable it.
  */
-contract AggregatorProxy is AggregatorInterface, Owned {
+contract AggregatorProxy is AggregatorInterface, Owned, Disableable {
 
   AggregatorInterface public aggregator;
 
@@ -96,17 +97,6 @@ contract AggregatorProxy is AggregatorInterface, Owned {
     aggregator = AggregatorInterface(_aggregator);
   }
 
-  /**
-   * @notice Allows the owner to destroy the contract if it is not intended to
-   * be used any longer.
-   */
-  function destroy()
-    external
-    onlyOwner()
-  {
-    selfdestruct(owner);
-  }
-
   /*
    * Internal
    */
@@ -114,6 +104,7 @@ contract AggregatorProxy is AggregatorInterface, Owned {
   function _latestAnswer()
     internal
     view
+    onlyWhenEnabled()
     returns (int256)
   {
     return aggregator.latestAnswer();
@@ -122,6 +113,7 @@ contract AggregatorProxy is AggregatorInterface, Owned {
   function _latestTimestamp()
     internal
     view
+    onlyWhenEnabled()
     returns (uint256)
   {
     return aggregator.latestTimestamp();
@@ -130,6 +122,7 @@ contract AggregatorProxy is AggregatorInterface, Owned {
   function _getAnswer(uint256 _roundId)
     internal
     view
+    onlyWhenEnabled()
     returns (int256)
   {
     return aggregator.getAnswer(_roundId);
@@ -138,6 +131,7 @@ contract AggregatorProxy is AggregatorInterface, Owned {
   function _getTimestamp(uint256 _roundId)
     internal
     view
+    onlyWhenEnabled()
     returns (uint256)
   {
     return aggregator.getTimestamp(_roundId);
@@ -146,6 +140,7 @@ contract AggregatorProxy is AggregatorInterface, Owned {
   function _latestRound()
     internal
     view
+    onlyWhenEnabled()
     returns (uint256)
   {
     return aggregator.latestRound();
