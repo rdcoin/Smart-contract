@@ -436,6 +436,8 @@ type SecretGenerator interface {
 
 type filePersistedSecretGenerator struct{}
 
+const readWritePermission = os.FileMode(0600)
+
 func (f filePersistedSecretGenerator) Generate(c Config) ([]byte, error) {
 	sessionPath := filepath.Join(c.RootDir(), "secret")
 	if utils.FileExists(sessionPath) {
@@ -447,7 +449,7 @@ func (f filePersistedSecretGenerator) Generate(c Config) ([]byte, error) {
 	}
 	key := securecookie.GenerateRandomKey(32)
 	str := base64.StdEncoding.EncodeToString(key)
-	return key, ioutil.WriteFile(sessionPath, []byte(str), 0644)
+	return key, ioutil.WriteFile(sessionPath, []byte(str), readWritePermission)
 }
 
 func parseAddress(str string) (interface{}, error) {
