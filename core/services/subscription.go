@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
@@ -189,8 +190,9 @@ func NewManagedSubscription(
 	filter ethereum.FilterQuery,
 	callback func(eth.Log),
 ) (*ManagedSubscription, error) {
+	ctx := context.Background()
 	logs := make(chan eth.Log)
-	es, err := logSubscriber.SubscribeToLogs(logs, filter)
+	es, err := logSubscriber.SubscribeToLogs(ctx, logs, filter)
 	if err != nil {
 		return nil, err
 	}

@@ -267,7 +267,7 @@ func TestPollingDeviationChecker_TriggerIdleTimeThreshold(t *testing.T) {
 		Return(decimal.NewFromInt(100), nil)
 	ethClient.On("GetAggregatorRound", initr.InitiatorParams.Address).
 		Return(big.NewInt(1), nil)
-	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything).
+	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything, mock.Anything).
 		Return(fakeSubscription(), nil)
 	ethClient.On("GetLatestSubmission", mock.Anything, mock.Anything).
 		Return(big.NewInt(0), big.NewInt(0), nil)
@@ -316,7 +316,7 @@ func TestPollingDeviationChecker_StartStop(t *testing.T) {
 		Return(decimal.NewFromInt(100), nil)
 	ethClient.On("GetAggregatorRound", initr.InitiatorParams.Address).
 		Return(big.NewInt(1), nil)
-	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything).
+	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything, mock.Anything).
 		Return(fakeSubscription(), nil)
 
 	rm := new(mocks.RunManager)
@@ -374,7 +374,7 @@ func TestPollingDeviationChecker_NoDeviation_CanBeCanceled(t *testing.T) {
 		Return(decimal.NewFromInt(100), nil)
 	ethClient.On("GetAggregatorRound", initr.InitiatorParams.Address).
 		Return(big.NewInt(1), nil)
-	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything).
+	ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything, mock.Anything).
 		Return(fakeSubscription(), nil)
 	ethClient.On("GetLatestSubmission", mock.Anything, mock.Anything).
 		Return(big.NewInt(0), big.NewInt(0), nil)
@@ -649,7 +649,7 @@ func TestPollingDeviationChecker_PollIfRoundOpen(t *testing.T) {
 				Return(decimal.NewFromInt(100), nil)
 			ethClient.On("GetAggregatorRound", initr.InitiatorParams.Address).
 				Return(big.NewInt(test.aggregatorRound), nil)
-			ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything).
+			ethClient.On("SubscribeToLogs", mock.Anything, mock.Anything, mock.Anything).
 				Return(fakeSubscription(), nil)
 			ethClient.On("GetLatestSubmission", mock.Anything, mock.Anything).
 				Return(big.NewInt(0), big.NewInt(test.latestRoundAnswered), nil)
