@@ -21,9 +21,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Bitwise representation of the permissions which are * not * permitted on files.
-// These are read, write, and execute permissions for groups and public
-const invalidPerms = os.FileMode(0077)
+// ownerPermsMask are the file permission bits reserved for owner.
+const ownerPermsMask = os.FileMode(0700)
 
 // RunNode starts the Chainlink core.
 func (cli *Client) RunNode(c *clipkg.Context) error {
@@ -87,9 +86,10 @@ func checkFilePermissions(directory string) error {
 			if err != nil {
 				return err
 			}
-			perms := info.Mode()
+			// don't forget we are only checking perms!
+			perms := info.Mode().Perm()
 			// bitwise & used to check if file has any invalid permissions
-			if perms&invalidPerms != 0 {
+			if perms&^ownerPermsMask != 0 {
 				return fmt.Errorf("%s has overly permissive file permissions, %s", path, perms.String())
 			}
 			return nil
