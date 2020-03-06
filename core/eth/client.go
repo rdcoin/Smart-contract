@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"chainlink/core/assets"
 	"chainlink/core/utils"
@@ -12,6 +13,7 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
@@ -21,6 +23,25 @@ const (
 	// aggregating numerical data such as prices.
 	FluxAggregatorName = "FluxAggregator"
 )
+
+//  Resubscribe calls fn repeatedly to keep a subscription established. When
+//  the subscription is established, Resubscribe waits for it to fail and calls
+//  fn again. This process repeats until Unsubscribe is called or the active
+//  subscription ends successfully.
+//
+//  Resubscribe applies backoff between calls to fn. The time between calls is
+//  adapted based on the error rate, but will never exceed backoffMax.
+//
+//  Reexport of go-ethereum's Resubscribe.
+func Resubscribe(backoffMax time.Duration, fn ResubscribeFunc) Subscription {
+	eventFn := func(ctx context.Context) (event.Subscription, error) {
+		return fn(ctx)
+	}
+	return event.Resubscribe(backoffMax, eventFn)
+}
+
+// A ResubscribeFunc attempts to establish a subscription.
+type ResubscribeFunc = func(ctx context.Context) (Subscription, error)
 
 //go:generate mockery -name Client -output ../internal/mocks/ -case=underscore
 

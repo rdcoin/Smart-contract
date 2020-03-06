@@ -27,6 +27,10 @@ import (
 // defaultHTTPTimeout is the timeout used by the price adapter fetcher for outgoing HTTP requests.
 const defaultHTTPTimeout = 5 * time.Second
 
+// ethResubscribeMaxBackoff is the maximum amount of time to wait between
+// resubscription attempts to ethereum.
+const ethResubscribeMaxBackoff = 5 * time.Second
+
 // MinimumPollingInterval is the smallest possible polling interval the Flux
 // Monitor supports.
 const MinimumPollingInterval = models.Duration(defaultHTTPTimeout)
@@ -515,11 +519,9 @@ func (p *PollingDeviationChecker) subscribeToNewRounds(client eth.Client) (eth.S
 		return nil, err
 	}
 
-	ctx := context.Background()
-	subscription, err := client.SubscribeToLogs(ctx, p.newRounds, filterQuery)
-	if err != nil {
-		return nil, err
-	}
+	subscription := eth.Resubscribe(ethResubscribeMaxBackoff, func(ctx context.Context) (eth.Subscription, error) {
+		return client.SubscribeToLogs(ctx, p.newRounds, filterQuery)
+	})
 
 	logger.Infow(
 		"Flux Monitor Initiator subscribing to new rounds",
