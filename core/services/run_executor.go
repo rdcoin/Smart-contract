@@ -40,6 +40,7 @@ func (re *runExecutor) Execute(runID *models.ID) error {
 	if err != nil {
 		return errors.Wrapf(err, "error finding run %s", runID)
 	}
+	defer promInstrumentJobRunUpdate(run.Status)(&run.JobSpecID, &run.Status)
 
 	for taskIndex := range run.TaskRuns {
 		taskRun := &run.TaskRuns[taskIndex]

@@ -21,19 +21,22 @@ import (
 )
 
 var (
-	numberRunsExecuted = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "run_manager_runs_started",
-		Help: "The total number of runs that have run",
-	})
-	numberRunsResumed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "run_manager_runs_resumed",
-		Help: "The total number of run resumptions",
-	})
-	numberRunsCancelled = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "run_manager_runs_cancelled",
-		Help: "The total number of run cancellations",
-	})
+	promTotalRunUpdates = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "run_manager_status_update_total",
+		Help: "The total number of status updates for Job Runs",
+	},
+		[]string{"job_spec_id", "from_status", "status"},
+	)
 )
+
+func promInstrumentJobRunUpdate(from models.RunStatus) func(**models.ID, *models.RunStatus) {
+	return func(jobSpecID **models.ID, status *models.RunStatus) {
+		if *status == from {
+			return
+		}
+		promTotalRunUpdates.WithLabelValues((*jobSpecID).String(), string(from), string(*status)).Inc()
+	}
+}
 
 // RecurringScheduleJobError contains the field for the error message.
 type RecurringScheduleJobError struct {
@@ -211,6 +214,8 @@ func (rm *runManager) CreateErrored(
 		UpdatedAt:   now,
 		InitiatorID: initiator.ID,
 	}
+	defer promInstrumentJobRunUpdate(run.Status)(&run.JobSpecID, &run.Status)
+
 	run.SetError(runErr)
 	defer rm.statsPusher.PushNow()
 	return &run, rm.orm.CreateJobRun(&run)
@@ -260,6 +265,7 @@ func (rm *runManager) Create(
 	run, adapters := NewRun(&job, initiator, creationHeight, runRequest, rm.config, rm.orm, now)
 	runCost := runCost(&job, rm.config, adapters)
 	ValidateRun(run, runCost)
+	defer promInstrumentJobRunUpdate(models.RunStatusUnstarted)(&run.JobSpecID, &run.Status)
 
 	if err := rm.orm.CreateJobRun(run); err != nil {
 		return nil, errors.Wrap(err, "CreateJobRun failed")
@@ -272,7 +278,6 @@ func (rm *runManager) Create(
 			run.ForLogger()...,
 		)
 		rm.runQueue.Run(run)
-		numberRunsExecuted.Inc()
 	}
 	return run, nil
 }
@@ -372,6 +377,7 @@ func (rm *runManager) Cancel(runID *models.ID) (*models.JobRun, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer promInstrumentJobRunUpdate(run.Status)(&run.JobSpecID, &run.Status)
 
 	logger.Debugw("Cancelling run", run.ForLogger()...)
 	if run.Status.Finished() {
@@ -379,7 +385,6 @@ func (rm *runManager) Cancel(runID *models.ID) (*models.JobRun, error) {
 	}
 
 	run.Cancel()
-	numberRunsCancelled.Inc()
 	defer rm.statsPusher.PushNow()
 	return &run, rm.orm.SaveJobRun(&run)
 }
@@ -403,7 +408,6 @@ func (rm *runManager) updateAndTrigger(run *models.JobRun) error {
 	}
 	rm.statsPusher.PushNow()
 	if run.Status == models.RunStatusInProgress {
-		numberRunsResumed.Inc()
 		rm.runQueue.Run(run)
 	}
 	return nil
