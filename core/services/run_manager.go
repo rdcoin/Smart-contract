@@ -29,12 +29,12 @@ var (
 	)
 )
 
-func promInstrumentJobRunUpdate(from models.RunStatus) func(**models.ID, *models.RunStatus) {
-	return func(jobSpecID **models.ID, status *models.RunStatus) {
-		if *status == from {
+func promInstrumentJobRunUpdate(from models.RunStatus) func(models.ID, models.RunStatus) {
+	return func(jobSpecID models.ID, status models.RunStatus) {
+		if status == from {
 			return
 		}
-		promTotalRunUpdates.WithLabelValues((*jobSpecID).String(), string(from), string(*status)).Inc()
+		promTotalRunUpdates.WithLabelValues(jobSpecID.String(), string(from), string(status)).Inc()
 	}
 }
 
@@ -214,7 +214,7 @@ func (rm *runManager) CreateErrored(
 		UpdatedAt:   now,
 		InitiatorID: initiator.ID,
 	}
-	defer promInstrumentJobRunUpdate(run.Status)(&run.JobSpecID, &run.Status)
+	defer promInstrumentJobRunUpdate(run.Status)(*run.JobSpecID, run.Status)
 
 	run.SetError(runErr)
 	defer rm.statsPusher.PushNow()
@@ -265,7 +265,7 @@ func (rm *runManager) Create(
 	run, adapters := NewRun(&job, initiator, creationHeight, runRequest, rm.config, rm.orm, now)
 	runCost := runCost(&job, rm.config, adapters)
 	ValidateRun(run, runCost)
-	defer promInstrumentJobRunUpdate(models.RunStatusUnstarted)(&run.JobSpecID, &run.Status)
+	defer promInstrumentJobRunUpdate(models.RunStatusUnstarted)(*run.JobSpecID, run.Status)
 
 	if err := rm.orm.CreateJobRun(run); err != nil {
 		return nil, errors.Wrap(err, "CreateJobRun failed")
@@ -377,7 +377,7 @@ func (rm *runManager) Cancel(runID *models.ID) (*models.JobRun, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer promInstrumentJobRunUpdate(run.Status)(&run.JobSpecID, &run.Status)
+	defer promInstrumentJobRunUpdate(run.Status)(*run.JobSpecID, run.Status)
 
 	logger.Debugw("Cancelling run", run.ForLogger()...)
 	if run.Status.Finished() {
