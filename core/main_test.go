@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"chainlink/core/cltest"
 	"chainlink/core/cmd"
-	"chainlink/core/internal/cltest"
 )
 
 func ExampleRun() {
