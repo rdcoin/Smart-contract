@@ -1,0 +1,49 @@
+{
+  "name": "generate_feeds",
+  "description": "Generate feeds.json from reference data directory",
+  "version": "0.0.0",
+  "author": "Alex Kwiatkowski and Jonathan Mukai-Heidt",
+  "bin": {
+    "generate_feeds": "./bin/run"
+  },
+  "bugs": "https://github.com/smartcontractkit/chainlink/issues",
+  "dependencies": {
+    "@oclif/command": "^1",
+    "@oclif/config": "^1",
+    "@oclif/plugin-help": "^2",
+    "tslib": "^1"
+  },
+  "devDependencies": {
+    "@oclif/dev-cli": "^1",
+    "@types/node": "^10",
+    "eslint": "^5.13",
+    "eslint-config-oclif": "^3.1",
+    "eslint-config-oclif-typescript": "^0.1",
+    "ts-node": "^8",
+    "typescript": "^3.3"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "/bin",
+    "/lib"
+  ],
+  "homepage": "https://github.com/smartcontractkit/chainlink",
+  "keywords": [
+    "oclif"
+  ],
+  "license": "NA",
+  "main": "lib/index.js",
+  "oclif": {
+    "bin": "generate_feeds"
+  },
+  "repository": "smartcontractkit/chainlink",
+  "scripts": {
+    "posttest": "eslint . --ext .ts --config .eslintrc",
+    "prepack": "rm -rf lib && tsc -b && oclif-dev readme",
+    "test": "echo NO TESTS",
+    "version": "oclif-dev readme && git add README.md"
+  },
+  "types": "lib/index.d.ts"
+}

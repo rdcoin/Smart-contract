@@ -16,5 +16,6 @@ declare module 'feeds' {
     sponsored?: string[]
     threshold: number
     compareOffchain?: string
+    healthPrice?: string
   }
 }
