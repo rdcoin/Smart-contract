@@ -1,0 +1,24 @@
+name: Build feeds.json from reference-data-directory
+
+on:
+  repository_dispatch:
+    types: build-feeds
+
+jobs:
+  build-feeds:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: rupurt/reference-data-directory
+          token: ${{secrets.REPO_ACCESS_TOKEN}}
+
+      - name: List workspace contents
+        run: ls -l ${{env.GITHUB_WORKSPACE}}
+
+      - name: PWD workspace
+        run: echo ${{env.GITHUB_WORKSPACE}}
+
+      - name: Generate
+        run: yarn workspace @chainlink/feeds run generate:feeds ${{env.GITHUB_WORKSPACE}}

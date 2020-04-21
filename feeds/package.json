@@ -29,7 +29,8 @@
     "build-theme": "lessc --js src/theme/theme.less src/theme.css",
     "watch-theme": "less-watch-compiler --enable-js src/theme src theme.less",
     "server": "node server",
-    "setup": "tsc -b"
+    "setup": "tsc -b",
+    "generate:feeds": "tsc"
   },
   "dependencies": {
     "@chainlink/redux": "0.0.1",
