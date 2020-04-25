@@ -9,12 +9,14 @@ import (
 
 	"github.com/smartcontractkit/chainlink/core/adapters"
 	"github.com/smartcontractkit/chainlink/core/assets"
+	"github.com/smartcontractkit/chainlink/core/services/eth/contracts"
 	"github.com/smartcontractkit/chainlink/core/store"
 	"github.com/smartcontractkit/chainlink/core/store/models"
 	"github.com/smartcontractkit/chainlink/core/store/orm"
 	"github.com/smartcontractkit/chainlink/core/utils"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 )
@@ -145,8 +147,33 @@ func validateFluxMonitor(i models.Initiator, j models.JobSpec, store *store.Stor
 	if err := validateFeeds(i.Feeds, store); err != nil {
 		fe.Add(err.Error())
 	}
+	fluxAggregator, err := contracts.NewFluxAggregator(address, store.TxManager, nil)
+	if err != nil {
+		return err
+	}
+	if err := checkAggregatorLINKAddress(i.Address, store); err != nil {
+		fe.Add(err.Error())
+	}
 
 	return fe.CoerceEmptyToNil()
+}
+
+func CheckAggregatorLINKAddress(address common.Address, store *store.Store, fluxAggregator contracts.FluxAggregator) error {
+	
+	fluxAggregatorLINKTokenAddress, err := fluxAggregator.LinkToken()
+	if err != nil {
+		return err
+	}
+
+	if strings.ToLower(fluxAggregatorLINKTokenAddress.String()) != strings.ToLower(store.Config.LinkContractAddress()) {
+		return fmt.Errorf(
+			"flux aggregator contract at %s has LINK token address of %s which does not match configured LINK address of %s (set by LINK_CONTRACT_ADDRESS)",
+			address.String(),
+			fluxAggregatorLINKTokenAddress.String(),
+			store.Config.LinkContractAddress(),
+		)
+	}
+	return nil
 }
 
 func validateFeeds(feeds models.Feeds, store *store.Store) error {

@@ -15,6 +15,7 @@ import (
 type FluxAggregator interface {
 	ethsvc.ConnectedContract
 	RoundState(oracle common.Address) (FluxAggregatorRoundState, error)
+	LinkToken() (common.Address, error)
 }
 
 const (
@@ -85,6 +86,15 @@ type FluxAggregatorRoundState struct {
 
 func (rs FluxAggregatorRoundState) TimesOutAt() uint64 {
 	return rs.Timeout + rs.StartedAt
+}
+
+func (fa *fluxAggregator) LinkToken() (common.Address, error) {
+	var result common.Address
+	err := fa.Call(&result, "linkToken")
+	if err != nil {
+		return common.Address{}, errors.Wrap(err, "unable to encode message call")
+	}
+	return result, nil
 }
 
 func (fa *fluxAggregator) RoundState(oracle common.Address) (FluxAggregatorRoundState, error) {

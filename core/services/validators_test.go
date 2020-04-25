@@ -3,6 +3,7 @@ package services_test
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -10,11 +11,15 @@ import (
 	"github.com/smartcontractkit/chainlink/core/adapters"
 	"github.com/smartcontractkit/chainlink/core/assets"
 	"github.com/smartcontractkit/chainlink/core/internal/cltest"
+	"github.com/smartcontractkit/chainlink/core/internal/mocks"
 	"github.com/smartcontractkit/chainlink/core/services"
 	"github.com/smartcontractkit/chainlink/core/store/models"
 	"github.com/smartcontractkit/chainlink/core/utils"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/smartcontractkit/chainlink/core/eth"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -430,6 +435,30 @@ func TestValidateInitiator_FluxMonitorErrors(t *testing.T) {
 			assert.Contains(t, err.Error(), test.Field)
 		})
 	}
+}
+
+func TestValidateInitiator_FluxMonitorErrors_LinkAggregatorAddressDoesNotMatch(t *testing.T) {
+	t.Parallel()
+
+	store, cleanup := cltest.NewStore(t)
+	txm := new(mocks.TxManager)
+	store.TxManager = txm
+	txm.On("Call", mock.AnythingOfType("*hexutil.Bytes"), "eth_call", mock.MatchedBy(func(args eth.CallArgs) bool {
+		return args.To.String() == "0x3cCad4715152693fE3BC4460591e3D3Fbd071b42" && reflect.DeepEqual(args.Data, hexutil.Bytes{0x57, 0x97, 0xe, 0x93})
+	}), "latest").Return(nil).Run(func(args mock.Arguments) {
+		argPtr := args.Get(0).(*hexutil.Bytes)
+		argPtr.UnmarshalText([]byte("0x000000000000000000000000DEADBEEFDEADBEEFDEADCAFEBEEFCAFEBEEFCAFE"))
+		// TODO: How do I know what to put here?!
+	})
+	defer cleanup()
+
+	//job := cltest.NewJob()
+	job := cltest.NewJobWithFluxMonitorInitiator()
+	initr := job.Initiators[0]
+
+	err := services.ValidateInitiator(initr, job, store)
+	require.Error(t, err)
+	assert.EqualError(t, err, "foo")
 }
 
 func TestValidateInitiator_FluxMonitor_EthereumDisabled(t *testing.T) {
