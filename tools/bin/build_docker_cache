@@ -1,0 +1,24 @@
+#!/bin/sh
+
+if [ -z "$REPO" ]
+then
+      >&2 echo "\$REPO must be set e.g. [smartcontractkit/chainlink]"
+      exit 1
+fi
+if [ -z "$GITHUB_USER" ]
+then
+      >&2 echo "\$GITHUB_USER must be set e.g. [SergeyDNazarov]"
+      exit 1
+fi
+if [ -z "$GITHUB_TOKEN" ]
+then
+      >&2 echo "\$GITHUB_TOKEN must be set. https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line"
+      exit 1
+fi
+
+curl \
+  -v \
+  -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.everest-preview+json"  \
+  https://api.github.com/repos/$REPO/dispatches \
+  -d '{"event_type":"build-docker-cache"}' \
