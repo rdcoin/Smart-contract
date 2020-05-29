@@ -218,7 +218,7 @@ describe('FluxMonitor / FluxAggregator integration with two nodes', () => {
     )
   })
 
-  it('updates the price', async () => {
+  it.only('updates the price', async () => {
     const node1InitialRunCount = clClient1.getJobRuns().length
     const node2InitialRunCount = clClient2.getJobRuns().length
 
@@ -228,24 +228,26 @@ describe('FluxMonitor / FluxAggregator integration with two nodes', () => {
     fluxMonitorJob.initiators[0].params.feeds = [EXTERNAL_ADAPTER_2_URL]
     clClient2.createJob(JSON.stringify(fluxMonitorJob))
 
-    // initial job run
+    console.log('!!!!!!!!!!!!!!!!!!! initial job run')
     await t.assertJobRun(clClient1, node1InitialRunCount + 1, 'initial update')
     await t.assertJobRun(clClient2, node2InitialRunCount + 1, 'initial update')
     await assertAggregatorValues(10000, 1, 1, 1, 1, 'initial round')
 
-    // node 1 should still begin round even with unresponsive node 2
+    console.log(
+      '!!!!!!!!!!!!!!!!!!! node 1 should still begin round even with unresponsive node 2',
+    )
     await clClient2.pause()
     await t.changePriceFeed(EXTERNAL_ADAPTER_URL, 110)
     await t.changePriceFeed(EXTERNAL_ADAPTER_2_URL, 120)
     await t.assertJobRun(clClient1, node1InitialRunCount + 2, 'second update')
     await assertAggregatorValues(10000, 1, 2, 2, 1, 'node 1 only')
 
-    // node 2 should finish round
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!! node 2 should finish round')
     await clClient2.unpause()
     await t.assertJobRun(clClient2, node2InitialRunCount + 2, 'second update')
     await assertAggregatorValues(11500, 2, 2, 2, 2, 'second round')
 
-    // reduce minAnswers to 1
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! reduce minAnswers to 1')
     await clClient2.pause()
     await fluxAggregator.updateFutureRounds(
       MINIMUM_CONTRACT_PAYMENT,
@@ -258,7 +260,9 @@ describe('FluxMonitor / FluxAggregator integration with two nodes', () => {
     await t.assertJobRun(clClient1, node1InitialRunCount + 3, 'third update')
     await assertAggregatorValues(13000, 3, 3, 3, 2, 'third round')
 
-    // node should continue to start new rounds alone
+    console.log(
+      '!!!!!!!!!!!!!!!!!!!!!!!! node should continue to start new rounds alone',
+    )
     await t.changePriceFeed(EXTERNAL_ADAPTER_URL, 140)
     await t.assertJobRun(clClient1, node1InitialRunCount + 4, 'fourth update')
     await assertAggregatorValues(14000, 4, 4, 4, 2, 'fourth round')
