@@ -20,6 +20,7 @@ abstract contract LinkTokenReceiver {
     bytes memory _data
   )
     public
+    virtual
     onlyLINK
     validRequestLength(_data)
     permittedFunctionsForLINK(_data)

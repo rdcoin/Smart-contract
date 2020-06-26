@@ -106,4 +106,10 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
   {
     return "v0.6/tests/MockV3Aggregator.sol";
   }
+
+  function onTokenTransfer(address, uint256, bytes calldata _data)
+    external
+  {
+    require(_data.length == 0, "transfer doesn't accept calldata");
+  }
 }
