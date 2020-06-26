@@ -229,4 +229,14 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     acceptingPayments = _acceptingPayments;
     emit AcceptingPayments(_acceptingPayments);
   }
+
+  function withdraw(
+    address _to,
+    uint256 _amount
+  )
+    external
+    onlyOwner()
+  {
+    require(LINK.transfer(_to, _amount), "LINK tranfer failed");
+  }
 }

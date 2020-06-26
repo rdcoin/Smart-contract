@@ -109,6 +109,7 @@ describe('AccessPerBlock', () => {
       'staleRoundDuration',
       'staleRounds',
       'staleTimestamp',
+      'withdraw',
       // Ownable methods:
       'acceptOwnership',
       'owner',
@@ -704,6 +705,33 @@ describe('AccessPerBlock', () => {
             .connect(defaultAccount)
             .setPriceFeedTolerances(newStaleRounds, newStaleRoundDuration, 0)
         }, 'Can not set to zero')
+      })
+    })
+  })
+
+  describe('#withdraw', () => {
+    beforeEach(async () => {
+      await link.transfer(controller.address, 1)
+      matchers.bigNum(1, await link.balanceOf(controller.address))
+    })
+
+    describe('when called by a stranger', () => {
+      it('reverts', async () => {
+        await matchers.evmRevert(async () => {
+          await controller
+            .connect(personas.Carol)
+            .withdraw(personas.Carol.address, 1)
+        }, 'Only callable by owner')
+      })
+    })
+
+    describe('when called by the owner', () => {
+      it('transfers the LINK out of the contract', async () => {
+        await controller
+          .connect(defaultAccount)
+          .withdraw(personas.Carol.address, 1)
+        matchers.bigNum(0, await link.balanceOf(controller.address))
+        matchers.bigNum(1, await link.balanceOf(personas.Carol.address))
       })
     })
   })
