@@ -75,7 +75,13 @@ describe('AccessPerBlock', () => {
         staleTimestamp,
         acceptingPayments,
       )
-    await aggregator.updateRoundData(roundId, answer, timestamp, startedAt, roundId)
+    await aggregator.updateRoundData(
+      roundId,
+      answer,
+      timestamp,
+      startedAt,
+      roundId,
+    )
     proxy = await proxyFactory
       .connect(defaultAccount)
       .deploy(aggregator.address, controller.address)
@@ -353,6 +359,28 @@ describe('AccessPerBlock', () => {
           )
           await matchers.evmRevert(async () => {
             await link.transferAndCall(
+              controller.address,
+              calculatePaymentAmount(maxBlocks),
+              data,
+            )
+          })
+        })
+      })
+
+      describe('when using the wrong token', () => {
+        let notLink: contract.Instance<contract.LinkTokenFactory>
+
+        beforeEach(async () => {
+          notLink = await linkTokenFactory.connect(defaultAccount).deploy()
+        })
+
+        it('rejects payment', async () => {
+          const data = ethers.utils.defaultAbiCoder.encode(
+            ['address', 'address'],
+            [reader.address, proxy.address],
+          )
+          await matchers.evmRevert(async () => {
+            await notLink.transferAndCall(
               controller.address,
               calculatePaymentAmount(maxBlocks),
               data,
