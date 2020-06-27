@@ -8,6 +8,12 @@ import "../interfaces/AggregatorV3Interface.sol";
 import "../vendor/SafeMath.sol";
 import "./AccessControllerInterface.sol";
 
+/**
+ * @title AccessPerBlock
+ * @notice This contract allows readers to pay for access to a feed for
+ * a duration of time measured in blocks. Each feed can have its own
+ * unique price and access will be granted by default if no price is set.
+ */
 contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
   using SafeMath for uint256;
 
@@ -49,6 +55,24 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     bool acceptingPayments
   );
 
+  /**
+   * @param _link The LINK token address
+   * @param _previousAccessController the previous access control
+   * contract to fall back to when checking a reader's access
+   * @param _paymentPriceFeed The contract containing the price
+   * of LINK in which this contract will use to convert amounts
+   * @param _maxBlocks The maximum amount of time a user can pay
+   * for a reader to access a feed at once
+   * @param _staleRounds The number of stale rounds the price
+   * feed can report
+   * @param _staleRoundDuration The length of time between a
+   * round started on the price feed and when it was last updated
+   * in the same round
+   * @param _staleTimestamp The maximum amount of time since the
+   * last update on the price feed
+   * @param _acceptingPayments Switch to turn off allowing users
+   * to pay for access
+   */
   constructor(
     address _link,
     address _previousAccessController,
@@ -69,6 +93,19 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     setAcceptingPayments(_acceptingPayments);
   }
 
+  /**
+   * @notice Returns the access of an address. Uses the following order
+   * of precedence:
+   * 1. The _user has paid for access in this contract
+   * 2. The querying address (the feed) does not have a price set
+   * 3. The address to check (the _user) has access on the previous access
+   * controller
+   * 4. The check is being performed from off-chain
+   * @param _user The address to query
+   * @param _data The bytes data included in the query (this is only
+   * used to send to the previous access controller)
+   * @return bool access
+   */
   function hasAccess(
     address _user,
     bytes memory _data
@@ -84,6 +121,10 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
       || _user == tx.origin;
   }
 
+  /**
+   * @notice Gets the Chainlink token address
+   * @return address of the LINK token
+   */
   function getChainlinkToken()
     public
     view
@@ -93,6 +134,15 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     return address(LINK);
   }
 
+  /**
+   * @notice Get the maximum allowed payment for a given feed
+   * by a user
+   * @param _reader The address to have access
+   * @param _feed The address of the feed for which access is being
+   * paid for
+   * @return uint256 The amount of LINK to pay for the maximum
+   * amount of access time
+   */
   function getMaxPayment(
     address _reader,
     address _feed
@@ -107,6 +157,17 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
                                             .sub(accessUntilBlock[_reader][_feed]));
   }
 
+  /**
+   * @notice Get the amount of payment in LINK needed for the
+   * specified feed and the number of blocks. Converts the
+   * price of the feed with the current rate of LINK/USD to
+   * determine the payment amount of LINK.
+   * @param _feed The address of the feed for which access is being
+   * paid for
+   * @param _blocks The number of blocks to calculate the payment
+   * @return uint256 The amount of LINK to pay for the given feed
+   * and blocks
+   */
   function getPaymentAmount(
     address _feed,
     uint256 _blocks
@@ -120,6 +181,18 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
                                .mul(_blocks);
   }
 
+  /**
+   * @notice Triggered when the user pays for access with transferAndCall.
+   * This will determine the current rate of LINK/USD and ensure that the
+   * reader does not gain access longer than the maximum number of blocks
+   * allowed. Upon payment, immediately funds the aggregator contract.
+   * @dev The feed in the data payload must be that of a proxy, not the
+   * implementation of the aggregator itself.
+   * @param _amount The LINK payment amount
+   * @param _data The data payload of the payment. Must be encoded as
+   * ['address', 'address'] where the first address is the reader to gain
+   * access and the second address is the feed (the proxy)
+   */
   function onTokenTransfer(
     address,
     uint256 _amount,
@@ -146,10 +219,23 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit PaymentReceived(reader, feed, blocks);
   }
 
+  /**
+   * @dev Converts the decimals of an aggregator to a multiplier.
+   * Example: 8 decimals converts to 100000000.
+   */
   function getMultiplier() internal view returns (uint256) {
     return 10 ** uint256(paymentPriceFeed.decimals());
   }
 
+  /**
+   * @dev Safely obtain the current LINK/USD rate from the price feed.
+   * Utilizes configurable tolerances to ensure bad data is not
+   * ingested. staleRounds if the answer was calculated in a previous
+   * round and not the current round. staleRoundDuration, if the answer
+   * has been calculated with new and old data. staleTimestamp if the
+   * answer has not been updated for some period of time.
+   * @return uint256 The current rate of LINK/USD
+   */
   function getRate() internal view returns (uint256) {
     (
       uint256 roundId,
@@ -164,6 +250,15 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     return uint256(answer);
   }
 
+  /**
+   * @notice Called by the owner to set tolerances for ingesting price
+   * feed data.
+   * @param _staleRounds The number of rounds that an answer can be
+   * carried over from
+   * @param _staleRoundDuration The difference between the time a round
+   * started and when it was last updated
+   * @param _staleTimestamp The time the latest answer was updated at
+   */
   function setPriceFeedTolerances(
     uint256 _staleRounds,
     uint256 _staleRoundDuration,
@@ -182,6 +277,11 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit PriceFeedTolerancesSet(_staleRounds, _staleRoundDuration, _staleTimestamp);
   }
 
+  /**
+   * @notice Called by the owner to set the address of the price feed
+   * used to convert LINK/USD rates to LINK amounts
+   * @param _paymentPriceFeed The address of the price feed
+   */
   function setPaymentPriceFeed(
     address _paymentPriceFeed
   )
@@ -195,6 +295,12 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit PriceFeedSet(oldPriceFeed, _paymentPriceFeed);
   }
 
+  /**
+   * @notice Called by the owner to set a price denominated in USD to
+   * 8 decimals per feed. For example, $0.01 per block would be 1000000.
+   * @param _feed The address of the feed which the price is being set for
+   * @param _pricePerBlock The USD price per block for the feed
+   */
   function setPricePerBlock(
     address _feed,
     uint256 _pricePerBlock
@@ -207,6 +313,11 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit PriceSet(_feed, _pricePerBlock);
   }
 
+  /**
+   * @notice Called by the owner to set the maximum number of blocks that
+   * a user can pay for access for any feed.
+   * @param _maxBlocks The number of blocks to set the maximum to
+   */
   function setMaxBlocks(
     uint256 _maxBlocks
   )
@@ -219,6 +330,12 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit MaxBlocksSet(oldMaxBlocks, _maxBlocks);
   }
 
+  /**
+   * @notice Called by the owner to flag that the contract is acceping
+   * payments
+   * @param _acceptingPayments Boolean to allow or disallow payments to
+   * this contract
+   */
   function setAcceptingPayments(
     bool _acceptingPayments
   )
@@ -230,6 +347,16 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     emit AcceptingPayments(_acceptingPayments);
   }
 
+  /**
+   * @notice Called by the owner to withdraw LINK sent directly to
+   * this contract without using transferAndCall.
+   * @dev When the contract is used as intended, LINK shouldn't be
+   * present on this contract. However, this allows user funds to
+   * be recovered in case they accidentally send LINK without
+   * transferAndCall.
+   * @param _to The address to send the LINK to
+   * @param _amount The amount to send
+   */
   function withdraw(
     address _to,
     uint256 _amount
@@ -237,6 +364,6 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     external
     onlyOwner()
   {
-    require(LINK.transfer(_to, _amount), "LINK tranfer failed");
+    require(LINK.transfer(_to, _amount), "LINK transfer failed");
   }
 }
