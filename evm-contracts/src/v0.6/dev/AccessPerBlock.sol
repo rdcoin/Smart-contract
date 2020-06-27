@@ -151,10 +151,11 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
     view
     returns (uint256)
   {
-    return accessUntilBlock[_reader][_feed] < block.number
+    uint256 currentAccessBlock = accessUntilBlock[_reader][_feed];
+    return currentAccessBlock < block.number
       ? getPaymentAmount(_feed, maxBlocks)
-      : getPaymentAmount(_feed, block.number.add(maxBlocks)
-                                            .sub(accessUntilBlock[_reader][_feed]));
+      : getPaymentAmount(_feed, maxBlocks.add(block.number)
+                                         .sub(currentAccessBlock));
   }
 
   /**
@@ -244,6 +245,7 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
       uint256 updatedAt,
       uint256 answeredInRound
     ) = paymentPriceFeed.latestRoundData();
+    require(answer > int256(0), "Invalid answer");
     require(roundId.sub(answeredInRound) <= staleRounds, "Answered in stale round");
     require(updatedAt.sub(startedAt) <= staleRoundDuration, "Round is stale");
     require(block.timestamp.sub(updatedAt) <= staleTimestamp, "Answer is stale");

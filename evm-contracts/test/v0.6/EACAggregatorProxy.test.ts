@@ -47,7 +47,13 @@ describe('AccessControlledAggregatorProxy', () => {
       .connect(defaultAccount)
       .deploy(decimals, 0)
     controller = await accessControlFactory.connect(defaultAccount).deploy()
-    await aggregator.updateRoundData(roundId, answer, timestamp, startedAt)
+    await aggregator.updateRoundData(
+      roundId,
+      answer,
+      timestamp,
+      startedAt,
+      roundId,
+    )
     await link.transfer(aggregator.address, deposit)
     proxy = await proxyFactory
       .connect(defaultAccount)

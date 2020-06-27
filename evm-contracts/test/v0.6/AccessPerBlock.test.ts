@@ -41,7 +41,7 @@ describe('AccessPerBlock', () => {
   const multiply = 100000000 // decimals = 8
   const pricePerBlock = 1000000 // $0.01
   const maxBlocks = 5
-  const staleRounds = 3
+  const staleRounds = 2
   const staleRoundDuration = 900 // 15 minutes
   const staleTimestamp = 86400 // 24 hours
   const acceptingPayments = true
@@ -75,7 +75,7 @@ describe('AccessPerBlock', () => {
         staleTimestamp,
         acceptingPayments,
       )
-    await aggregator.updateRoundData(roundId, answer, timestamp, startedAt)
+    await aggregator.updateRoundData(roundId, answer, timestamp, startedAt, roundId)
     proxy = await proxyFactory
       .connect(defaultAccount)
       .deploy(aggregator.address, controller.address)
@@ -458,6 +458,70 @@ describe('AccessPerBlock', () => {
           calculatePaymentAmount(4),
           await controller.getPaymentAmount(proxy.address, 4),
         )
+      })
+
+      describe('when the rate is invalid', () => {
+        beforeEach(async () => {
+          await aggregator.updateAnswer(0)
+        })
+
+        it('reverts', async () => {
+          await matchers.evmRevert(async () => {
+            await controller.getPaymentAmount(proxy.address, 1)
+          }, 'Invalid answer')
+        })
+      })
+
+      describe('when answered in stale round', () => {
+        beforeEach(async () => {
+          const block = await provider.getBlock('latest')
+          await aggregator.updateRoundData(
+            17,
+            answer,
+            block?.timestamp,
+            block?.timestamp,
+            14,
+          )
+        })
+
+        it('reverts', async () => {
+          await matchers.evmRevert(async () => {
+            await controller.getPaymentAmount(proxy.address, 1)
+          }, 'Answered in stale round')
+        })
+      })
+
+      describe('when the round is stale', () => {
+        beforeEach(async () => {
+          const round = await aggregator.latestRoundData()
+          const block = await provider.getBlock('latest')
+          await aggregator.updateRoundData(
+            round.roundId.add(1),
+            answer,
+            block?.timestamp,
+            0,
+            round.roundId.add(1),
+          )
+        })
+
+        it('reverts', async () => {
+          await matchers.evmRevert(async () => {
+            await controller.getPaymentAmount(proxy.address, 1)
+          }, 'Round is stale')
+        })
+      })
+
+      describe('when the answer is stale', () => {
+        beforeEach(async () => {
+          await h.increaseTimeBy(staleTimestamp, provider)
+          await h.mineBlock(provider)
+        })
+
+        it('reverts', async () => {
+          await matchers.evmRevert(async () => {
+            await controller.getPaymentAmount(proxy.address, 1)
+          }, 'Answer is stale')
+        })
       })
     })
   })

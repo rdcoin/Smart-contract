@@ -22,6 +22,7 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
   mapping(uint256 => int256) public override getAnswer;
   mapping(uint256 => uint256) public override getTimestamp;
   mapping(uint256 => uint256) private getStartedAt;
+  mapping(uint256 => uint256) private getAnsweredInRound;
 
   constructor(
     uint8 _decimals,
@@ -40,13 +41,15 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
     getAnswer[latestRound] = _answer;
     getTimestamp[latestRound] = block.timestamp;
     getStartedAt[latestRound] = block.timestamp;
+    getAnsweredInRound[latestRound] = latestRound;
   }
 
   function updateRoundData(
     uint256 _roundId,
     int256 _answer,
     uint256 _timestamp,
-    uint256 _startedAt
+    uint256 _startedAt,
+    uint256 _answeredInRound
   ) public {
     latestRound = _roundId;
     latestAnswer = _answer;
@@ -54,6 +57,7 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
     getAnswer[latestRound] = _answer;
     getTimestamp[latestRound] = _timestamp;
     getStartedAt[latestRound] = _startedAt;
+    getAnsweredInRound[latestRound] = _answeredInRound;
   }
 
   function getRoundData(uint256 _roundId)
@@ -73,7 +77,7 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
       getAnswer[_roundId],
       getStartedAt[_roundId],
       getTimestamp[_roundId],
-      _roundId
+      getAnsweredInRound[_roundId]
     );
   }
 
@@ -94,7 +98,7 @@ contract MockV3Aggregator is AggregatorInterface, AggregatorV3Interface {
       getAnswer[latestRound],
       getStartedAt[latestRound],
       getTimestamp[latestRound],
-      latestRound
+      getAnsweredInRound[latestRound]
     );
   }
 
