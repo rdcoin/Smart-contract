@@ -94,6 +94,36 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
   }
 
   /**
+   * @notice Returns the access of an address for a specified feed. Uses the
+   * following order of precedence:
+   * 1. The _user has paid for access in this contract
+   * 2. The querying address (the feed) does not have a price set
+   * 3. The address to check (the _user) has access on the previous access
+   * controller
+   * 4. The check is being performed from off-chain
+   * @param _feed The address of the feed which access is requested
+   * @param _user The address to query
+   * @param _data The bytes data included in the query (this is only
+   * used to send to the previous access controller)
+   * @return bool access
+   */
+  function hasAccessTo(
+    address _feed,
+    address _user,
+    bytes memory _data
+  )
+    public
+    view
+    override
+    returns (bool)
+  {
+    return accessUntilBlock[_user][_feed] >= block.number
+      || pricePerBlock[_feed] == 0
+      || PREVIOUS.hasAccessTo(_feed, _user, _data)
+      || _user == tx.origin;
+  }
+
+  /**
    * @notice Returns the access of an address. Uses the following order
    * of precedence:
    * 1. The _user has paid for access in this contract
@@ -108,17 +138,14 @@ contract AccessPerBlock is Owned, LinkTokenReceiver, AccessControllerInterface {
    */
   function hasAccess(
     address _user,
-    bytes memory _data
+    bytes calldata _data
   )
-    public
+    external
     view
     override
     returns (bool)
   {
-    return accessUntilBlock[_user][msg.sender] >= block.number
-      || pricePerBlock[msg.sender] == 0
-      || PREVIOUS.hasAccess(_user, _data)
-      || _user == tx.origin;
+    return hasAccessTo(msg.sender, _user, _data);
   }
 
   /**

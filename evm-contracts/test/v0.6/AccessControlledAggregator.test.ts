@@ -114,6 +114,7 @@ describe('AccessControlledAggregator', () => {
       'removeAccess',
       'checkEnabled',
       'hasAccess',
+      'hasAccessTo',
     ])
   })
 

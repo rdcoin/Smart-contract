@@ -101,6 +101,7 @@ describe('AccessPerBlock', () => {
       'getMaxPayment',
       'getPaymentAmount',
       'hasAccess',
+      'hasAccessTo',
       'LINK',
       'maxBlocks',
       'onTokenTransfer',

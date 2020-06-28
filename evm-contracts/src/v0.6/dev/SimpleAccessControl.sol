@@ -40,6 +40,23 @@ contract SimpleAccessControl is AccessControllerInterface, Owned {
   }
 
   /**
+   * @notice Returns the access of an address
+   * @param _user The address to query
+   */
+  function hasAccessTo(
+    address,
+    address _user,
+    bytes memory
+  )
+    public
+    view
+    override
+    returns (bool)
+  {
+    return hasAccess(_user, "");
+  }
+
+  /**
    * @notice Adds an address to the access list
    * @param _user The address to add
    */

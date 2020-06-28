@@ -23,6 +23,7 @@ describe('SimpleAccessControl', () => {
   it('has a limited public interface', () => {
     matchers.publicAbi(new SimpleAccessControlFactory(), [
       'hasAccess',
+      'hasAccessTo',
       'addAccess',
       'disableAccessCheck',
       'enableAccessCheck',
