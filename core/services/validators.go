@@ -19,6 +19,10 @@ import (
 	"github.com/smartcontractkit/chainlink/core/store/models"
 	"github.com/smartcontractkit/chainlink/core/store/orm"
 	"github.com/smartcontractkit/chainlink/core/utils"
+
+	"github.com/BurntSushi/toml"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 	"go.uber.org/multierr"
 )
@@ -247,14 +251,16 @@ func validateRunLogInitiator(i models.Initiator, j models.JobSpec, s *store.Stor
 				} else if key == "address" {
 					fe.Add("Cannot set EthTx Task's address parameter with a RunLog Initiator")
 				} else if key == "fromaddress" {
-					address, err := hexutil.Decode(v.String())
+					if !common.IsHexAddress(v.String()) {
+						fe.Add("Cannot set EthTx Task's fromAddress parameter: invalid address")
+						return true
+					}
+					address := common.HexToAddress(v.String())
+					exists, err := s.KeyExists(address)
 					if err != nil {
-						fe.Add(fmt.Sprintf("Cannot set EthTx Task's fromAddress parameter: %s", err.Error()))
-					} else {
-						exists, err := s.KeyExists(address)
-						if err != nil || !exists {
-							fe.Add("Cannot set EthTx Task's fromAddress parameter: the node does not have this private key in the database")
-						}
+						fe.Add("Cannot set EthTx Task's fromAddress parameter: " + err.Error())
+					} else if !exists {
+						fe.Add("Cannot set EthTx Task's fromAddress parameter: the node does not have this private key in the database")
 					}
 				}
 				return true
