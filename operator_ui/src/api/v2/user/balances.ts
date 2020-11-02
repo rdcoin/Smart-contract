@@ -7,7 +7,7 @@ import * as presenters from 'core/store/presenters'
  *
  * @example "<application>/user/balances"
  */
-const ACCOUNT_BALANCES_ENDPOINT = '/v2/user/balances'
+const ACCOUNT_BALANCES_ENDPOINT = '/v2/keys/eth'
 
 export class Balances {
   constructor(private api: jsonapi.Api) {}
