@@ -420,7 +420,6 @@ func (rt RendererTable) renderETHKeys(keys []presenters.ETHKey) error {
 			deletedAt,
 		})
 	}
-	fmt.Println("\n🔑 ETH Keys")
 	renderList([]string{"Address", "ETH", "LINK", "Next nonce", "Last used", "Is funding", "Created", "Updated", "Deleted"}, rows)
 	return nil
 }
