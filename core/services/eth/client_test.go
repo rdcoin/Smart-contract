@@ -104,6 +104,11 @@ func TestEthClient_RecoverWsEOFDisconnect(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
+	_, err = ethClient.ChainID(ctx)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+
 	select {
 	case log, closed := <-logs:
 		assert.False(t, closed)
