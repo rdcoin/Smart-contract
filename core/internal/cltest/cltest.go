@@ -286,6 +286,7 @@ func NewWSServer(msg string, callback func(data []byte)) (*httptest.Server, stri
 	var err error
 	var conn *websocket.Conn
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("got connection")
 		conn, err = upgrader.Upgrade(w, r, nil)
 		logger.PanicIf(err)
 		for {
@@ -311,7 +312,6 @@ func NewWSServer(msg string, callback func(data []byte)) (*httptest.Server, stri
 	u.Scheme = "ws"
 
 	return server, u.String(), func() {
-		server.Close()
 		conn.Close()
 	}
 }

@@ -87,18 +87,29 @@ func TestEthClient_RecoverWsEOFDisconnect(t *testing.T) {
 	err = ethClient.Dial(ctx)
 	require.NoError(t, err)
 
-	logs := make(chan<- types.Log)
+	logs := make(chan types.Log)
 	subscription, err := ethClient.SubscribeFilterLogs(ctx, ethereum.FilterQuery{}, logs)
 	require.NoError(t, err)
 
 	wsCleanup()
 
 	select {
-	case err, _ := <-subscription.Err():
-		assert.NoError(t, err)
-		return
+	case err, closed := <-subscription.Err():
+		assert.False(t, closed)
+		assert.Error(t, err)
 	case <-time.After(15 * time.Second):
 		t.Error("Timed out waiting for error on subscription")
+		return
+	}
+
+	time.Sleep(1 * time.Second)
+
+	select {
+	case log, closed := <-logs:
+		assert.False(t, closed)
+		assert.NotNil(t, log)
+	case <-time.After(15 * time.Second):
+		t.Error("Timed out waiting for log")
 		return
 	}
 }
