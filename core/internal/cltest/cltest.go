@@ -283,8 +283,10 @@ func NewWSServer(msg string, callback func(data []byte)) (*httptest.Server, stri
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 
+	var err error
+	var conn *websocket.Conn
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
+		conn, err = upgrader.Upgrade(w, r, nil)
 		logger.PanicIf(err)
 		for {
 			_, data, err := conn.ReadMessage()
@@ -310,6 +312,7 @@ func NewWSServer(msg string, callback func(data []byte)) (*httptest.Server, stri
 
 	return server, u.String(), func() {
 		server.Close()
+		conn.Close()
 	}
 }
 

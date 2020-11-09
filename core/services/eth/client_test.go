@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"math/big"
 
@@ -69,6 +71,36 @@ func TestEthClient_TransactionReceipt(t *testing.T) {
 		_, err = ethClient.TransactionReceipt(context.Background(), hash)
 		require.Equal(t, ethereum.NotFound, errors.Cause(err))
 	})
+}
+
+func TestEthClient_RecoverWsEOFDisconnect(t *testing.T) {
+	_, wsUrl, wsCleanup := cltest.NewWSServer(`{"id": 1, "jsonrpc": "2.0", "result": "0x100"}`, func(data []byte) {
+		request := cltest.ParseJSON(t, bytes.NewReader(data))
+		fmt.Println("got request", request)
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	ethClient, err := eth.NewClient(wsUrl)
+	require.NoError(t, err)
+	err = ethClient.Dial(ctx)
+	require.NoError(t, err)
+
+	logs := make(chan<- types.Log)
+	subscription, err := ethClient.SubscribeFilterLogs(ctx, ethereum.FilterQuery{}, logs)
+	require.NoError(t, err)
+
+	wsCleanup()
+
+	select {
+	case err, _ := <-subscription.Err():
+		assert.NoError(t, err)
+		return
+	case <-time.After(15 * time.Second):
+		t.Error("Timed out waiting for error on subscription")
+		return
+	}
 }
 
 func TestEthClient_PendingNonceAt(t *testing.T) {
