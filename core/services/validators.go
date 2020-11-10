@@ -8,10 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BurntSushi/toml"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
 	"github.com/smartcontractkit/chainlink/core/adapters"
 	"github.com/smartcontractkit/chainlink/core/assets"
 	"github.com/smartcontractkit/chainlink/core/services/offchainreporting"
@@ -22,6 +18,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 	"go.uber.org/multierr"

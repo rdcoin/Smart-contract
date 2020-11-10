@@ -28,9 +28,9 @@ import (
 func TestClient_RunNodeShowsEnv(t *testing.T) {
 	store, cleanup := cltest.NewStore(t)
 	defer cleanup()
-	_, err := store.KeyStore.NewAccount(cltest.Password)
-	require.NoError(t, err)
 	require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+	_, err := store.KeyStore.NewAccount()
+	require.NoError(t, err)
 
 	store.Config.Set("LINK_CONTRACT_ADDRESS", "0x514910771AF9Ca656af840dff83E8264EcF986CA")
 	store.Config.Set("FLAGS_CONTRACT_ADDRESS", "0x4A5b9B4aD08616D11F3A402FF7cBEAcB732a76C6")
@@ -119,9 +119,9 @@ func TestClient_RunNodeWithPasswords(t *testing.T) {
 			// Clear out fixture
 			store.DeleteUser()
 			defer cleanup()
-			_, err := store.KeyStore.NewAccount(cltest.Password)
-			require.NoError(t, err)
 			require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+			_, err := store.KeyStore.NewAccount()
+			require.NoError(t, err)
 
 			app := new(mocks.Application)
 			app.On("GetStore").Return(store)
@@ -133,7 +133,7 @@ func TestClient_RunNodeWithPasswords(t *testing.T) {
 			ethClient.On("BalanceAt", mock.Anything, mock.Anything, mock.Anything).Return(big.NewInt(10), nil)
 			store.EthClient = ethClient
 
-			_, err = store.KeyStore.NewAccount("password") // matches correct_password.txt
+			_, err = store.KeyStore.NewAccount() // matches correct_password.txt
 			require.NoError(t, err)
 
 			var unlocked bool
@@ -176,9 +176,9 @@ func TestClient_RunNode_CreateFundingKeyIfNotExists(t *testing.T) {
 	store, cleanup := cltest.NewStore(t)
 	// Clear out fixture
 	defer cleanup()
-	_, err := store.KeyStore.NewAccount(cltest.Password)
-	require.NoError(t, err)
 	require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+	_, err := store.KeyStore.NewAccount()
+	require.NoError(t, err)
 
 	app := new(mocks.Application)
 	app.On("GetStore").Return(store)
@@ -189,7 +189,7 @@ func TestClient_RunNode_CreateFundingKeyIfNotExists(t *testing.T) {
 	ethClient.On("Dial", mock.Anything).Return(nil)
 	store.EthClient = ethClient
 
-	_, err = store.KeyStore.NewAccount("password") // matches correct_password.txt
+	_, err = store.KeyStore.NewAccount() // matches correct_password.txt
 	require.NoError(t, err)
 
 	callback := func(store *strpkg.Store, phrase string) (string, error) {
@@ -242,9 +242,9 @@ func TestClient_RunNodeWithAPICredentialsFile(t *testing.T) {
 			// Clear out fixture
 			store.DeleteUser()
 			defer cleanup()
-			_, err := store.KeyStore.NewAccount(cltest.Password)
-			require.NoError(t, err)
 			require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+			_, err := store.KeyStore.NewAccount()
+			require.NoError(t, err)
 
 			app := new(mocks.Application)
 			app.On("GetStore").Return(store)
@@ -454,7 +454,8 @@ func TestClient_RebroadcastTransactions_WithinRange_LegacyTXM(t *testing.T) {
 			connectedStore, connectedCleanup := cltest.NewStoreWithConfig(config)
 			defer connectedCleanup()
 
-			account, err := connectedStore.KeyStore.NewAccount(cltest.Password)
+			require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+			account, err := connectedStore.KeyStore.NewAccount()
 			tx := cltest.CreateTxWithNonceAndGasPrice(t, connectedStore, account.Address, 0, uint64(test.nonce), 1000)
 			bumpedRaw := cltest.NewHash().Bytes()
 			bumpedRawHash := cltest.NewHash()
@@ -540,9 +541,9 @@ func TestClient_RebroadcastTransactions_OutsideRange_LegacyTxManager(t *testing.
 			store, strCleanup := cltest.NewStoreWithConfig(config)
 			defer strCleanup()
 
-			account, err := store.KeyStore.NewAccount(cltest.Password)
+			require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+			account, err := store.KeyStore.NewAccount()
 			require.NoError(t, err)
-			require.NoError(t, store.KeyStore.Unlock(cltest.Password)) // remove?
 
 			txManager := new(mocks.TxManager)
 			store.TxManager = txManager
@@ -606,9 +607,9 @@ func TestClient_RebroadcastTransactions_OutsideRange_BPTXM(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			store, cleanup := cltest.NewStore(t)
 			defer cleanup()
-			account, err := store.KeyStore.NewAccount(cltest.Password)
+			require.NoError(t, store.KeyStore.Unlock(cltest.Password))
+			account, err := store.KeyStore.NewAccount()
 			require.NoError(t, err)
-			require.NoError(t, store.KeyStore.Unlock(cltest.Password)) // remove?
 
 			app := new(mocks.Application)
 			app.On("GetStore").Return(store)
