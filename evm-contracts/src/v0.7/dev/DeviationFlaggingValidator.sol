@@ -33,42 +33,42 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
 
   /**
    * @notice sets up the validator with its threshold and flag address.
-   * @param _flags sets the address of the flags contract
-   * @param _flaggingThreshold sets the threshold that will trigger a flag to be
+   * @param flagsAddress sets the address of the flags contract
+   * @param threshold sets the threshold that will trigger a flag to be
    * raised. Setting the value of 100,000 is equivalent to tolerating a 100%
    * change compared to the previous price.
    */
   constructor(
-    address _flags,
-    uint24 _flaggingThreshold
+    address flagsAddress,
+    uint24 threshold
   )
     public
   {
-    setFlagsAddress(_flags);
-    setFlaggingThreshold(_flaggingThreshold);
+    setFlagsAddress(flagsAddress);
+    setFlaggingThreshold(threshold);
   }
 
   /**
    * @notice checks whether the parameters count as valid by comparing the
    * difference change to the flagging threshold.
-   * @param _previousRoundId is ignored.
-   * @param _previousAnswer is used as the median of the difference with the
+   * @param previousRoundId is ignored.
+   * @param previousAnswer is used as the median of the difference with the
    * current answer to determine if the deviation threshold has been exceeded.
-   * @param _roundId is ignored.
-   * @param _answer is the latest answer which is compared for a ratio of change
+   * @param roundId is ignored.
+   * @param answer is the latest answer which is compared for a ratio of change
    * to make sure it has not execeeded the flagging threshold.
    */
   function validate(
-    uint256 _previousRoundId,
-    int256 _previousAnswer,
-    uint256 _roundId,
-    int256 _answer
+    uint256 previousRoundId,
+    int256 previousAnswer,
+    uint256 roundId,
+    int256 answer
   )
     external
     override
     returns (bool)
   {
-    if (!isValid(_previousRoundId, _previousAnswer, _roundId, _answer)) {
+    if (!isValid(previousRoundId, previousAnswer, roundId, answer)) {
       flags.raiseFlag(msg.sender);
       return false;
     }
@@ -80,26 +80,26 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
    * @notice checks whether the parameters count as valid by comparing the
    * difference change to the flagging threshold and raises a flag on the
    * flagging contract if so.
-   * @param _previousAnswer is used as the median of the difference with the
+   * @param previousAnswer is used as the median of the difference with the
    * current answer to determine if the deviation threshold has been exceeded.
-   * @param _answer is the current answer which is compared for a ratio of
+   * @param answer is the current answer which is compared for a ratio of
    * change * to make sure it has not execeeded the flagging threshold.
    */
   function isValid(
     uint256 ,
-    int256 _previousAnswer,
+    int256 previousAnswer,
     uint256 ,
-    int256 _answer
+    int256 answer
   )
     public
     view
     returns (bool)
   {
-    if (_previousAnswer == 0) return true;
+    if (previousAnswer == 0) return true;
 
-    (int256 change, bool changeOk) = _previousAnswer.sub(_answer);
+    (int256 change, bool changeOk) = previousAnswer.sub(answer);
     (int256 ratioNumerator, bool numOk) = change.mul(THRESHOLD_MULTIPLIER);
-    (int256 ratio, bool ratioOk) = ratioNumerator.div(_previousAnswer);
+    (int256 ratio, bool ratioOk) = ratioNumerator.div(previousAnswer);
     (uint256 absRatio, bool absOk) = abs(ratio);
 
     return changeOk && numOk && ratioOk && absOk && absRatio <= flaggingThreshold;
@@ -107,37 +107,37 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
 
   /**
    * @notice updates the flagging threshold
-   * @param _flaggingThreshold sets the threshold that will trigger a flag to be
+   * @param newThreshold sets the threshold that will trigger a flag to be
    * raised. Setting the value of 100,000 is equivalent to tolerating a 100%
    * change compared to the previous price.
    */
-  function setFlaggingThreshold(uint24 _flaggingThreshold)
+  function setFlaggingThreshold(uint24 newThreshold)
     public
     onlyOwner()
   {
     uint24 previousFT = uint24(flaggingThreshold);
 
-    if (previousFT != _flaggingThreshold) {
-      flaggingThreshold = _flaggingThreshold;
+    if (previousFT != newThreshold) {
+      flaggingThreshold = newThreshold;
 
-      emit FlaggingThresholdUpdated(previousFT, _flaggingThreshold);
+      emit FlaggingThresholdUpdated(previousFT, newThreshold);
     }
   }
 
   /**
    * @notice updates the flagging contract address for raising flags
-   * @param _flags sets the address of the flags contract
+   * @param flagsAddress sets the address of the flags contract
    */
-  function setFlagsAddress(address _flags)
+  function setFlagsAddress(address flagsAddress)
     public
     onlyOwner()
   {
     address previous = address(flags);
 
-    if (previous != _flags) {
-      flags = FlagsInterface(_flags);
+    if (previous != flagsAddress) {
+      flags = FlagsInterface(flagsAddress);
 
-      emit FlagsAddressUpdated(previous, _flags);
+      emit FlagsAddressUpdated(previous, flagsAddress);
     }
   }
 
