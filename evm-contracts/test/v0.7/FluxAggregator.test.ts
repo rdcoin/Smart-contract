@@ -129,50 +129,50 @@ describe('FluxAggregator', () => {
   ) {
     assert.equal(
       want.eligibleToSubmit,
-      state._eligibleToSubmit,
+      state.eligibleToSubmit,
       'round state: unexecpted eligibility',
     )
     matchers.bigNum(
       want.roundId,
-      state._roundId,
+      state.roundId,
       'round state: unexpected Round ID',
     )
     matchers.bigNum(
       want.latestSubmission,
-      state._latestSubmission,
+      state.latestSubmission,
       'round state: unexpected latest submission',
     )
     if (want.startedAt === ShouldBeSet) {
       assert.isAbove(
-        state._startedAt.toNumber(),
-        startingState._startedAt.toNumber(),
+        state.startedAt.toNumber(),
+        startingState.startedAt.toNumber(),
         'round state: expected the started at to be the same as previous',
       )
     } else {
       matchers.bigNum(
         0,
-        state._startedAt,
+        state.startedAt,
         'round state: expected the started at not to be updated',
       )
     }
     matchers.bigNum(
       want.timeout,
-      state._timeout.toNumber(),
+      state.timeoutSeconds.toNumber(),
       'round state: unexepcted timeout',
     )
     matchers.bigNum(
       want.availableFunds,
-      state._availableFunds,
+      state.availableFunds,
       'round state: unexepected funds',
     )
     matchers.bigNum(
       want.oracleCount,
-      state._oracleCount,
+      state.numberOfOracles,
       'round state: unexpected oracle count',
     )
     matchers.bigNum(
       want.paymentAmount,
-      state._paymentAmount,
+      state.linkPaymentAmount,
       'round state: unexpected paymentamount',
     )
   }
@@ -442,7 +442,7 @@ describe('FluxAggregator', () => {
         await aggregator.connect(personas.Nelly).submit(nextRound, answer)
 
         const roundAfter = await aggregator.getRoundData(nextRound)
-        matchers.bigNum(nextRound, roundAfter.roundId)
+        matchers.bigNum(nextRound, roundAfter.id)
         matchers.bigNum(answer, roundAfter.answer)
         assert.isFalse(roundAfter.startedAt.isZero())
         matchers.bigNum(
@@ -457,7 +457,7 @@ describe('FluxAggregator', () => {
         )
 
         const roundAfterLatest = await aggregator.latestRoundData()
-        matchers.bigNum(roundAfter.roundId, roundAfterLatest.roundId)
+        matchers.bigNum(roundAfter.id, roundAfterLatest.id)
         matchers.bigNum(roundAfter.answer, roundAfterLatest.answer)
         matchers.bigNum(roundAfter.startedAt, roundAfterLatest.startedAt)
         matchers.bigNum(roundAfter.updatedAt, roundAfterLatest.updatedAt)
@@ -499,7 +499,7 @@ describe('FluxAggregator', () => {
           personas.Nelly.address,
           0,
         )
-        matchers.bigNum(1, startingState._roundId)
+        matchers.bigNum(1, startingState.roundId)
 
         await advanceRound(aggregator, oracles)
 
@@ -507,7 +507,7 @@ describe('FluxAggregator', () => {
           personas.Nelly.address,
           0,
         )
-        matchers.bigNum(2, updatedState._roundId)
+        matchers.bigNum(2, updatedState.roundId)
       })
 
       it('sets the startedAt time for the reporting round', async () => {
@@ -797,7 +797,7 @@ describe('FluxAggregator', () => {
         assert.equal(answer, ans.toNumber())
 
         const round = await aggregator.getRoundData(previousRound)
-        matchers.bigNum(previousRound, round.roundId)
+        matchers.bigNum(previousRound, round.id)
         matchers.bigNum(ans, round.answer)
         matchers.bigNum(updated, round.updatedAt)
         matchers.bigNum(previousRound - 1, round.answeredInRound)
@@ -813,7 +813,7 @@ describe('FluxAggregator', () => {
         await aggregator.connect(personas.Nelly).submit(nextRound, answer)
 
         const round = await aggregator.getRoundData(previousRound)
-        assert.notEqual(round.roundId, round.answeredInRound)
+        assert.notEqual(round.id, round.answeredInRound)
         matchers.bigNum(previousRound - 1, round.answeredInRound)
       })
 
@@ -3004,7 +3004,7 @@ describe('FluxAggregator', () => {
 
     it('returns the relevant round information', async () => {
       const round = await aggregator.getRoundData(latestRoundId)
-      matchers.bigNum(latestRoundId, round.roundId)
+      matchers.bigNum(latestRoundId, round.id)
       matchers.bigNum(answer, round.answer)
       const nowSeconds = new Date().valueOf() / 1000
       assert.isAbove(round.updatedAt.toNumber(), nowSeconds - 120)
@@ -3045,7 +3045,7 @@ describe('FluxAggregator', () => {
         const round = await aggregator.latestRoundData()
         const latestRoundId = await aggregator.latestRound()
 
-        matchers.bigNum(latestRoundId, round.roundId)
+        matchers.bigNum(latestRoundId, round.id)
         matchers.bigNum(answer, round.answer)
         const nowSeconds = new Date().valueOf() / 1000
         assert.isAbove(round.updatedAt.toNumber(), nowSeconds - 120)
