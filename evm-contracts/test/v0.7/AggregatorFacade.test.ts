@@ -127,7 +127,7 @@ describe('AggregatorFacade', () => {
     it('assembles the requested round data', async () => {
       const previousId = (await facade.latestRound()).sub(1)
       const round = await facade.getRoundData(previousId)
-      matchers.bigNum(previousId, round.roundId)
+      matchers.bigNum(previousId, round.id)
       matchers.bigNum(previousResponse, round.answer)
       matchers.bigNum(await facade.getTimestamp(previousId), round.startedAt)
       matchers.bigNum(await facade.getTimestamp(previousId), round.updatedAt)
@@ -144,7 +144,7 @@ describe('AggregatorFacade', () => {
     it('assembles the requested round data', async () => {
       const latestId = await facade.latestRound()
       const round = await facade.latestRoundData()
-      matchers.bigNum(latestId, round.roundId)
+      matchers.bigNum(latestId, round.id)
       matchers.bigNum(response, round.answer)
       matchers.bigNum(await facade.getTimestamp(latestId), round.startedAt)
       matchers.bigNum(await facade.getTimestamp(latestId), round.updatedAt)
