@@ -28,10 +28,10 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
 
   /**
    * @notice Returns the access of an address
-   * @param _user The address to query
+   * @param user The address to query
    */
   function hasAccess(
-    address _user,
+    address user,
     bytes memory
   )
     public
@@ -40,36 +40,36 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     override
     returns (bool)
   {
-    return accessList[_user] || !checkEnabled;
+    return accessList[user] || !checkEnabled;
   }
 
   /**
    * @notice Adds an address to the access list
-   * @param _user The address to add
+   * @param user The address to add
    */
-  function addAccess(address _user)
+  function addAccess(address user)
     external
     onlyOwner()
   {
-    if (!accessList[_user]) {
-      accessList[_user] = true;
+    if (!accessList[user]) {
+      accessList[user] = true;
 
-      emit AddedAccess(_user);
+      emit AddedAccess(user);
     }
   }
 
   /**
    * @notice Removes an address from the access list
-   * @param _user The address to remove
+   * @param user The address to remove
    */
-  function removeAccess(address _user)
+  function removeAccess(address user)
     external
     onlyOwner()
   {
-    if (accessList[_user]) {
-      accessList[_user] = false;
+    if (accessList[user]) {
+      accessList[user] = false;
 
-      emit RemovedAccess(_user);
+      emit RemovedAccess(user);
     }
   }
 
