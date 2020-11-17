@@ -17,11 +17,11 @@ contract SimpleReadAccessController is SimpleWriteAccessController {
 
   /**
    * @notice Returns the access of an address
-   * @param _user The address to query
+   * @param user The address to query
    */
   function hasAccess(
-    address _user,
-    bytes memory _calldata
+    address user,
+    bytes memory callData
   )
     public
     view
@@ -29,7 +29,7 @@ contract SimpleReadAccessController is SimpleWriteAccessController {
     override
     returns (bool)
   {
-    return super.hasAccess(_user, _calldata) || _user == tx.origin;
+    return super.hasAccess(user, callData) || user == tx.origin;
   }
 
 }
