@@ -142,139 +142,141 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
 
   /**
    * @notice set up the aggregator with initial configuration
-   * @param _link The address of the LINK token
-   * @param _paymentAmount The amount paid of LINK paid to each oracle per submission, in wei (units of 10⁻¹⁸ LINK)
-   * @param _timeout is the number of seconds after the previous round that are
+   * @param linkAddress The address of the LINK token
+   * @param linkPaymentAmount The amount paid of LINK paid to each oracle per submission, in wei (units of 10⁻¹⁸ LINK)
+   * @param timoutSeconds is the number of seconds after the previous round that are
    * allowed to lapse before allowing an oracle to skip an unfinished round
-   * @param _validator is an optional contract address for validating
+   * @param validatorAddress is an optional contract address for validating
    * external validation of answers
-   * @param _minSubmissionValue is an immutable check for a lower bound of what
+   * @param minimumSubmissionValue is an immutable check for a lower bound of what
    * submission values are accepted from an oracle
-   * @param _maxSubmissionValue is an immutable check for an upper bound of what
+   * @param maximumSubmissionValue is an immutable check for an upper bound of what
    * submission values are accepted from an oracle
-   * @param _decimals represents the number of decimals to offset the answer by
-   * @param _description a short description of what is being reported
+   * @param decimalPlaces represents the number of decimals to offset the answer by
+   * @param feedDescription a short description of what is being reported
    */
   constructor(
-    address _link,
-    uint128 _paymentAmount,
-    uint32 _timeout,
-    address _validator,
-    int256 _minSubmissionValue,
-    int256 _maxSubmissionValue,
-    uint8 _decimals,
-    string memory _description
+    address linkAddress,
+    uint128 linkPaymentAmount,
+    uint32 timoutSeconds,
+    address validatorAddress,
+    int256 minimumSubmissionValue,
+    int256 maximumSubmissionValue,
+    uint8 decimalPlaces,
+    string memory feedDescription
   ) public {
-    linkToken = LinkTokenInterface(_link);
-    updateFutureRounds(_paymentAmount, 0, 0, 0, _timeout);
-    setValidator(_validator);
-    minSubmissionValue = _minSubmissionValue;
-    maxSubmissionValue = _maxSubmissionValue;
-    decimals = _decimals;
-    description = _description;
-    rounds[0].updatedAt = uint64(block.timestamp.sub(uint256(_timeout)));
+    linkToken = LinkTokenInterface(linkAddress);
+    updateFutureRounds(linkPaymentAmount, 0, 0, 0, timoutSeconds);
+    setValidator(validatorAddress);
+    minSubmissionValue = minimumSubmissionValue;
+    maxSubmissionValue = maximumSubmissionValue;
+    decimals = decimalPlaces;
+    description = feedDescription;
+    rounds[0].updatedAt = uint64(block.timestamp.sub(uint256(timoutSeconds)));
   }
 
   /**
    * @notice called by oracles when they have witnessed a need to update
-   * @param _roundId is the ID of the round this submission pertains to
-   * @param _submission is the updated data that the oracle is submitting
+   * @param roundId is the ID of the round this submission pertains to
+   * @param submission is the updated data that the oracle is submitting
    */
-  function submit(uint256 _roundId, int256 _submission)
+  function submit(uint256 roundId, int256 submission)
     external
   {
-    bytes memory error = validateOracleRound(msg.sender, uint32(_roundId));
-    require(_submission >= minSubmissionValue, "value below minSubmissionValue");
-    require(_submission <= maxSubmissionValue, "value above maxSubmissionValue");
+    bytes memory error = validateOracleRound(msg.sender, uint32(roundId));
+    require(submission >= minSubmissionValue, "value below minSubmissionValue");
+    require(submission <= maxSubmissionValue, "value above maxSubmissionValue");
     require(error.length == 0, string(error));
 
-    oracleInitializeNewRound(uint32(_roundId));
-    recordSubmission(_submission, uint32(_roundId));
-    (bool updated, int256 newAnswer) = updateRoundAnswer(uint32(_roundId));
-    payOracle(uint32(_roundId));
-    deleteRoundDetails(uint32(_roundId));
+    oracleInitializeNewRound(uint32(roundId));
+    recordSubmission(submission, uint32(roundId));
+    (bool updated, int256 newAnswer) = updateRoundAnswer(uint32(roundId));
+    payOracle(uint32(roundId));
+    deleteRoundDetails(uint32(roundId));
     if (updated) {
-      validateAnswer(uint32(_roundId), newAnswer);
+      validateAnswer(uint32(roundId), newAnswer);
     }
   }
 
   /**
    * @notice called by the owner to remove and add new oracles as well as
    * update the round related parameters that pertain to total oracle count
-   * @param _removed is the list of addresses for the new Oracles being removed
-   * @param _added is the list of addresses for the new Oracles being added
-   * @param _addedAdmins is the admin addresses for the new respective _added
+   * @param removed is the list of addresses for the new Oracles being removed
+   * @param added is the list of addresses for the new Oracles being added
+   * @param addedAdmins is the admin addresses for the new respective added
    * list. Only this address is allowed to access the respective oracle's funds
-   * @param _minSubmissions is the new minimum submission count for each round
-   * @param _maxSubmissions is the new maximum submission count for each round
-   * @param _restartDelay is the number of rounds an Oracle has to wait before
+   * @param minimumSubmissions is the new minimum submission count for each round
+   * @param maximumSubmissions is the new maximum submission count for each round
+   * @param restartDelayRounds is the number of rounds an Oracle has to wait before
    * they can initiate a round
    */
   function changeOracles(
-    address[] calldata _removed,
-    address[] calldata _added,
-    address[] calldata _addedAdmins,
-    uint32 _minSubmissions,
-    uint32 _maxSubmissions,
-    uint32 _restartDelay
+    address[] calldata removed,
+    address[] calldata added,
+    address[] calldata addedAdmins,
+    uint32 minimumSubmissions,
+    uint32 maximumSubmissions,
+    uint32 restartDelayRounds
   )
     external
     onlyOwner()
   {
-    for (uint256 i = 0; i < _removed.length; i++) {
-      removeOracle(_removed[i]);
+    for (uint256 i = 0; i < removed.length; i++) {
+      removeOracle(removed[i]);
     }
 
-    require(_added.length == _addedAdmins.length, "need same oracle and admin count");
-    require(uint256(oracleCount()).add(_added.length) <= MAX_ORACLE_COUNT, "max oracles allowed");
+    require(added.length == addedAdmins.length, "need same oracle and admin count");
+    require(uint256(oracleCount()).add(added.length) <= MAX_ORACLE_COUNT, "max oracles allowed");
 
-    for (uint256 i = 0; i < _added.length; i++) {
-      addOracle(_added[i], _addedAdmins[i]);
+    for (uint256 i = 0; i < added.length; i++) {
+      addOracle(added[i], addedAdmins[i]);
     }
 
-    updateFutureRounds(paymentAmount, _minSubmissions, _maxSubmissions, _restartDelay, timeout);
+    updateFutureRounds(paymentAmount, minimumSubmissions, maximumSubmissions, restartDelayRounds, timeout);
   }
 
   /**
    * @notice update the round and payment related parameters for subsequent
    * rounds
-   * @param _paymentAmount is the payment amount for subsequent rounds
-   * @param _minSubmissions is the new minimum submission count for each round
-   * @param _maxSubmissions is the new maximum submission count for each round
-   * @param _restartDelay is the number of rounds an Oracle has to wait before
+   * @param linkPaymentAmount is the payment amount for subsequent rounds
+   * @param minimumSubmissions is the new minimum submission count for each round
+   * @param maximumSubmissions is the new maximum submission count for each round
+   * @param restartDelayRounds is the number of rounds an Oracle has to wait before
    * they can initiate a round
+   * @param timeoutSeconds is the number of seconds after the previous round that are
+   * allowed to lapse before allowing an oracle to skip an unfinished round
    */
   function updateFutureRounds(
-    uint128 _paymentAmount,
-    uint32 _minSubmissions,
-    uint32 _maxSubmissions,
-    uint32 _restartDelay,
-    uint32 _timeout
+    uint128 linkPaymentAmount,
+    uint32 minimumSubmissions,
+    uint32 maximumSubmissions,
+    uint32 restartDelayRounds,
+    uint32 timeoutSeconds
   )
     public
     onlyOwner()
   {
     uint32 oracleNum = oracleCount(); // Save on storage reads
-    require(_maxSubmissions >= _minSubmissions, "max must equal/exceed min");
-    require(oracleNum >= _maxSubmissions, "max cannot exceed total");
-    require(oracleNum == 0 || oracleNum > _restartDelay, "delay cannot exceed total");
-    require(recordedFunds.available >= requiredReserve(_paymentAmount), "insufficient funds for payment");
+    require(maximumSubmissions >= minimumSubmissions, "max must equal/exceed min");
+    require(oracleNum >= maximumSubmissions, "max cannot exceed total");
+    require(oracleNum == 0 || oracleNum > restartDelayRounds, "delay cannot exceed total");
+    require(recordedFunds.available >= requiredReserve(linkPaymentAmount), "insufficient funds for payment");
     if (oracleCount() > 0) {
-      require(_minSubmissions > 0, "min must be greater than 0");
+      require(minimumSubmissions > 0, "min must be greater than 0");
     }
 
-    paymentAmount = _paymentAmount;
-    minSubmissionCount = _minSubmissions;
-    maxSubmissionCount = _maxSubmissions;
-    restartDelay = _restartDelay;
-    timeout = _timeout;
+    paymentAmount = linkPaymentAmount;
+    minSubmissionCount = minimumSubmissions;
+    maxSubmissionCount = maximumSubmissions;
+    restartDelay = restartDelayRounds;
+    timeout = timeoutSeconds;
 
     emit RoundDetailsUpdated(
       paymentAmount,
-      _minSubmissions,
-      _maxSubmissions,
-      _restartDelay,
-      _timeout
+      minimumSubmissions,
+      maximumSubmissions,
+      restartDelayRounds,
+      timeoutSeconds
     );
   }
 
@@ -386,44 +388,44 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
 
   /**
    * @notice get past rounds answers
-   * @param _roundId the round number to retrieve the answer for
+   * @param roundId the round number to retrieve the answer for
    *
    * @dev #[deprecated] Use getRoundData instead. This does not error if no
    * answer has been reached, it will simply return 0. Either wait to point to
    * an already answered Aggregator or use the recommended getRoundData
    * instead which includes better verification information.
    */
-  function getAnswer(uint256 _roundId)
+  function getAnswer(uint256 roundId)
     public
     view
     virtual
     override
     returns (int256)
   {
-    if (validRoundId(_roundId)) {
-      return rounds[uint32(_roundId)].answer;
+    if (validRoundId(roundId)) {
+      return rounds[uint32(roundId)].answer;
     }
     return 0;
   }
 
   /**
    * @notice get timestamp when an answer was last updated
-   * @param _roundId the round number to retrieve the updated timestamp for
+   * @param roundId the round number to retrieve the updated timestamp for
    *
    * @dev #[deprecated] Use getRoundData instead. This does not error if no
    * answer has been reached, it will simply return 0. Either wait to point to
    * an already answered Aggregator or use the recommended getRoundData
    * instead which includes better verification information.
    */
-  function getTimestamp(uint256 _roundId)
+  function getTimestamp(uint256 roundId)
     public
     view
     virtual
     override
     returns (uint256)
   {
-    if (validRoundId(_roundId)) {
-      return rounds[uint32(_roundId)].updatedAt;
+    if (validRoundId(roundId)) {
+      return rounds[uint32(roundId)].updatedAt;
     }
     return 0;
   }
@@ -432,8 +434,8 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
    * @notice get data about a round. Consumers are encouraged to check
    * that they're receiving fresh data by inspecting the updatedAt and
    * answeredInRound return values.
-   * @param _roundId the round ID to retrieve the round data for
-   * @return roundId is the round ID for which data was retrieved
+   * @param roundId the round ID to retrieve the round data for
+   * @return id is the round ID for which data was retrieved
    * @return answer is the answer for the given round
    * @return startedAt is the timestamp when the round was started. This is 0
    * if the round hasn't been started yet.
@@ -446,25 +448,25 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
    * @dev Note that for in-progress rounds (i.e. rounds that haven't yet received
    * maxSubmissions) answer and updatedAt may change between queries.
    */
-  function getRoundData(uint80 _roundId)
+  function getRoundData(uint80 roundId)
     public
     view
     virtual
     override
     returns (
-      uint80 roundId,
+      uint80 id,
       int256 answer,
       uint256 startedAt,
       uint256 updatedAt,
       uint80 answeredInRound
     )
   {
-    Round memory r = rounds[uint32(_roundId)];
+    Round memory r = rounds[uint32(roundId)];
 
-    require(r.answeredInRound > 0 && validRoundId(_roundId), V3_NO_DATA_ERROR);
+    require(r.answeredInRound > 0 && validRoundId(roundId), V3_NO_DATA_ERROR);
 
     return (
-      _roundId,
+      roundId,
       r.answer,
       r.startedAt,
       r.updatedAt,
@@ -480,7 +482,7 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
    * latestAnswer/latestTimestamp functions. Consumers are encouraged to check
    * that they're receiving fresh data by inspecting the updatedAt and
    * answeredInRound return values.
-   * @return roundId is the round ID for which data was retrieved
+   * @return id is the round ID for which data was retrieved
    * @return answer is the answer for the given round
    * @return startedAt is the timestamp when the round was started. This is 0
    * if the round hasn't been started yet.
@@ -499,7 +501,7 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
     virtual
     override
     returns (
-      uint80 roundId,
+      uint80 id,
       int256 answer,
       uint256 startedAt,
       uint256 updatedAt,
@@ -513,90 +515,90 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
   /**
    * @notice query the available amount of LINK for an oracle to withdraw
    */
-  function withdrawablePayment(address _oracle)
+  function withdrawablePayment(address oracleAddress)
     external
     view
     returns (uint256)
   {
-    return oracles[_oracle].withdrawable;
+    return oracles[oracleAddress].withdrawable;
   }
 
   /**
    * @notice transfers the oracle's LINK to another address. Can only be called
    * by the oracle's admin.
-   * @param _oracle is the oracle whose LINK is transferred
-   * @param _recipient is the address to send the LINK to
-   * @param _amount is the amount of LINK to send
+   * @param oracleAddress is the oracle whose LINK is transferred
+   * @param recipientAddress is the address to send the LINK to
+   * @param linkAmount is the amount of LINK to send
    */
-  function withdrawPayment(address _oracle, address _recipient, uint256 _amount)
+  function withdrawPayment(address oracleAddress, address recipientAddress, uint256 linkAmount)
     external
   {
-    require(oracles[_oracle].admin == msg.sender, "only callable by admin");
+    require(oracles[oracleAddress].admin == msg.sender, "only callable by admin");
 
-    // Safe to downcast _amount because the total amount of LINK is less than 2^128.
-    uint128 amount = uint128(_amount);
-    uint128 available = oracles[_oracle].withdrawable;
+    // Safe to downcast linkAmount because the total amount of LINK is less than 2^128.
+    uint128 amount = uint128(linkAmount);
+    uint128 available = oracles[oracleAddress].withdrawable;
     require(available >= amount, "insufficient withdrawable funds");
 
-    oracles[_oracle].withdrawable = available.sub(amount);
+    oracles[oracleAddress].withdrawable = available.sub(amount);
     recordedFunds.allocated = recordedFunds.allocated.sub(amount);
 
-    assert(linkToken.transfer(_recipient, uint256(amount)));
+    assert(linkToken.transfer(recipientAddress, uint256(amount)));
   }
 
   /**
    * @notice transfers the owner's LINK to another address
-   * @param _recipient is the address to send the LINK to
-   * @param _amount is the amount of LINK to send
+   * @param recipientAddress is the address to send the LINK to
+   * @param linkAmount is the amount of LINK to send
    */
-  function withdrawFunds(address _recipient, uint256 _amount)
+  function withdrawFunds(address recipientAddress, uint256 linkAmount)
     external
     onlyOwner()
   {
     uint256 available = uint256(recordedFunds.available);
-    require(available.sub(requiredReserve(paymentAmount)) >= _amount, "insufficient reserve funds");
-    require(linkToken.transfer(_recipient, _amount), "token transfer failed");
+    require(available.sub(requiredReserve(paymentAmount)) >= linkAmount, "insufficient reserve funds");
+    require(linkToken.transfer(recipientAddress, linkAmount), "token transfer failed");
     updateAvailableFunds();
   }
 
   /**
    * @notice get the admin address of an oracle
-   * @param _oracle is the address of the oracle whose admin is being queried
+   * @param oracleAddress is the address of the oracle whose admin is being queried
    */
-  function getAdmin(address _oracle)
+  function getAdmin(address oracleAddress)
     external
     view
     returns (address)
   {
-    return oracles[_oracle].admin;
+    return oracles[oracleAddress].admin;
   }
 
   /**
    * @notice transfer the admin address for an oracle
-   * @param _oracle is the address of the oracle whose admin is being transferred
-   * @param _newAdmin is the new admin address
+   * @param oracleAddress is the address of the oracle whose admin is being transferred
+   * @param newAdminAddress is the new admin address
    */
-  function transferAdmin(address _oracle, address _newAdmin)
+  function transferAdmin(address oracleAddress, address newAdminAddress)
     external
   {
-    require(oracles[_oracle].admin == msg.sender, "only callable by admin");
-    oracles[_oracle].pendingAdmin = _newAdmin;
+    require(oracles[oracleAddress].admin == msg.sender, "only callable by admin");
+    oracles[oracleAddress].pendingAdmin = newAdminAddress;
 
-    emit OracleAdminUpdateRequested(_oracle, msg.sender, _newAdmin);
+    emit OracleAdminUpdateRequested(oracleAddress, msg.sender, newAdminAddress);
   }
 
   /**
    * @notice accept the admin address transfer for an oracle
-   * @param _oracle is the address of the oracle whose admin is being transferred
+   * @param oracleAddress is the address of the oracle whose admin is being transferred
    */
-  function acceptAdmin(address _oracle)
+  function acceptAdmin(address oracleAddress)
     external
   {
-    require(oracles[_oracle].pendingAdmin == msg.sender, "only callable by pending admin");
-    oracles[_oracle].pendingAdmin = address(0);
-    oracles[_oracle].admin = msg.sender;
+    require(oracles[oracleAddress].pendingAdmin == msg.sender, "only callable by pending admin");
+    oracles[oracleAddress].pendingAdmin = address(0);
+    oracles[oracleAddress].admin = msg.sender;
 
-    emit OracleAdminUpdated(_oracle, msg.sender);
+    emit OracleAdminUpdated(oracleAddress, msg.sender);
   }
 
   /**
@@ -618,67 +620,68 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
 
   /**
    * @notice allows the owner to specify new non-oracles to start new rounds
-   * @param _requester is the address to set permissions for
-   * @param _authorized is a boolean specifying whether they can start new rounds or not
-   * @param _delay is the number of rounds the requester must wait before starting another round
+   * @param requesterAddress is the address to set permissions for
+   * @param isAuthorized is a boolean specifying whether they can start new rounds or not
+   * @param delaySeconds is the number of rounds the requester must wait before starting another round
    */
-  function setRequesterPermissions(address _requester, bool _authorized, uint32 _delay)
+  function setRequesterPermissions(address requesterAddress, bool isAuthorized, uint32 delaySeconds)
     external
     onlyOwner()
   {
-    if (requesters[_requester].authorized == _authorized) return;
+    if (requesters[requesterAddress].authorized == isAuthorized) return;
 
-    if (_authorized) {
-      requesters[_requester].authorized = _authorized;
-      requesters[_requester].delay = _delay;
+    if (isAuthorized) {
+      requesters[requesterAddress].authorized = isAuthorized;
+      requesters[requesterAddress].delay = delaySeconds;
     } else {
-      delete requesters[_requester];
+      delete requesters[requesterAddress];
     }
 
-    emit RequesterPermissionsSet(_requester, _authorized, _delay);
+    emit RequesterPermissionsSet(requesterAddress, isAuthorized, delaySeconds);
   }
 
   /**
    * @notice called through LINK's transferAndCall to update available funds
    * in the same transaction as the funds were transferred to the aggregator
-   * @param _data is mostly ignored. It is checked for length, to be sure
+   * @param data is mostly ignored. It is checked for length, to be sure
    * nothing strange is passed in.
    */
-  function onTokenTransfer(address, uint256, bytes calldata _data)
+  function onTokenTransfer(address, uint256, bytes calldata data)
     external
   {
-    require(_data.length == 0, "transfer doesn't accept calldata");
+    require(data.length == 0, "transfer doesn't accept calldata");
     updateAvailableFunds();
   }
 
   /**
    * @notice a method to provide all current info oracles need. Intended only
    * only to be callable by oracles. Not for use by contracts to read state.
-   * @param _oracle the address to look up information for.
+   * @param oracleAddress the address to look up information for.
+   * @param queriedRoundId the round to query
    */
-  function oracleRoundState(address _oracle, uint32 _queriedRoundId)
+  function oracleRoundState(address oracleAddress, uint32 queriedRoundId)
     external
     view
     returns (
-      bool _eligibleToSubmit,
-      uint32 _roundId,
-      int256 _latestSubmission,
-      uint64 _startedAt,
-      uint64 _timeout,
-      uint128 _availableFunds,
-      uint8 _oracleCount,
-      uint128 _paymentAmount
+      bool eligibleToSubmit,
+      uint32 roundId,
+      int256 latestSubmission,
+      uint64 startedAt,
+      uint64 timeoutSeconds,
+      uint128 availableFunds,
+      uint8 numberOfOracles,
+      uint128 linkPaymentAmount
     )
   {
     require(msg.sender == tx.origin, "off-chain reading only");
 
-    if (_queriedRoundId > 0) {
-      Round storage round = rounds[_queriedRoundId];
-      RoundDetails storage details = details[_queriedRoundId];
+    if (queriedRoundId > 0) {
+      Round storage round = rounds[queriedRoundId];
+      RoundDetails storage details = details[queriedRoundId];
       return (
-        eligibleForSpecificRound(_oracle, _queriedRoundId),
-        _queriedRoundId,
-        oracles[_oracle].latestSubmission,
+        eligibleForSpecificRound(oracleAddress, queriedRoundId),
+        queriedRoundId,
+        oracles[oracleAddress].latestSubmission,
         round.startedAt,
         details.timeout,
         recordedFunds.available,
@@ -686,24 +689,24 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
         (round.startedAt > 0 ? details.paymentAmount : paymentAmount)
       );
     } else {
-      return oracleRoundStateSuggestRound(_oracle);
+      return oracleRoundStateSuggestRound(oracleAddress);
     }
   }
 
   /**
    * @notice method to update the address which does external data validation.
-   * @param _newValidator designates the address of the new validation contract.
+   * @param newValidatorAddress designates the address of the new validation contract.
    */
-  function setValidator(address _newValidator)
+  function setValidator(address newValidatorAddress)
     public
     onlyOwner()
   {
     address previous = address(validator);
 
-    if (previous != _newValidator) {
-      validator = AggregatorValidatorInterface(_newValidator);
+    if (previous != newValidatorAddress) {
+      validator = AggregatorValidatorInterface(newValidatorAddress);
 
-      emit ValidatorUpdated(previous, _newValidator);
+      emit ValidatorUpdated(previous, newValidatorAddress);
     }
   }
 
@@ -712,12 +715,12 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
    * Private
    */
 
-  function initializeNewRound(uint32 _roundId)
+  function initializeNewRound(uint32 roundId)
     private
   {
-    updateTimedOutRoundInfo(_roundId.sub(1));
+    updateTimedOutRoundInfo(roundId.sub(1));
 
-    reportingRoundId = _roundId;
+    reportingRoundId = roundId;
     RoundDetails memory nextDetails = RoundDetails(
       new int256[](0),
       maxSubmissionCount,
@@ -725,141 +728,141 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
       timeout,
       paymentAmount
     );
-    details[_roundId] = nextDetails;
-    rounds[_roundId].startedAt = uint64(block.timestamp);
+    details[roundId] = nextDetails;
+    rounds[roundId].startedAt = uint64(block.timestamp);
 
-    emit NewRound(_roundId, msg.sender, rounds[_roundId].startedAt);
+    emit NewRound(roundId, msg.sender, rounds[roundId].startedAt);
   }
 
-  function oracleInitializeNewRound(uint32 _roundId)
+  function oracleInitializeNewRound(uint32 roundId)
     private
   {
-    if (!newRound(_roundId)) return;
+    if (!newRound(roundId)) return;
     uint256 lastStarted = oracles[msg.sender].lastStartedRound; // cache storage reads
-    if (_roundId <= lastStarted + restartDelay && lastStarted != 0) return;
+    if (roundId <= lastStarted + restartDelay && lastStarted != 0) return;
 
-    initializeNewRound(_roundId);
+    initializeNewRound(roundId);
 
-    oracles[msg.sender].lastStartedRound = _roundId;
+    oracles[msg.sender].lastStartedRound = roundId;
   }
 
-  function requesterInitializeNewRound(uint32 _roundId)
+  function requesterInitializeNewRound(uint32 roundId)
     private
   {
-    if (!newRound(_roundId)) return;
+    if (!newRound(roundId)) return;
     uint256 lastStarted = requesters[msg.sender].lastStartedRound; // cache storage reads
-    require(_roundId > lastStarted + requesters[msg.sender].delay || lastStarted == 0, "must delay requests");
+    require(roundId > lastStarted + requesters[msg.sender].delay || lastStarted == 0, "must delay requests");
 
-    initializeNewRound(_roundId);
+    initializeNewRound(roundId);
 
-    requesters[msg.sender].lastStartedRound = _roundId;
+    requesters[msg.sender].lastStartedRound = roundId;
   }
 
-  function updateTimedOutRoundInfo(uint32 _roundId)
+  function updateTimedOutRoundInfo(uint32 roundId)
     private
   {
-    if (!timedOut(_roundId)) return;
+    if (!timedOut(roundId)) return;
 
-    uint32 prevId = _roundId.sub(1);
-    rounds[_roundId].answer = rounds[prevId].answer;
-    rounds[_roundId].answeredInRound = rounds[prevId].answeredInRound;
-    rounds[_roundId].updatedAt = uint64(block.timestamp);
+    uint32 prevId = roundId.sub(1);
+    rounds[roundId].answer = rounds[prevId].answer;
+    rounds[roundId].answeredInRound = rounds[prevId].answeredInRound;
+    rounds[roundId].updatedAt = uint64(block.timestamp);
 
-    delete details[_roundId];
+    delete details[roundId];
   }
 
-  function eligibleForSpecificRound(address _oracle, uint32 _queriedRoundId)
+  function eligibleForSpecificRound(address oracleAddress, uint32 queriedRoundId)
     private
     view
-    returns (bool _eligible)
+    returns (bool eligible)
   {
-    if (rounds[_queriedRoundId].startedAt > 0) {
-      return acceptingSubmissions(_queriedRoundId) && validateOracleRound(_oracle, _queriedRoundId).length == 0;
+    if (rounds[queriedRoundId].startedAt > 0) {
+      return acceptingSubmissions(queriedRoundId) && validateOracleRound(oracleAddress, queriedRoundId).length == 0;
     } else {
-      return delayed(_oracle, _queriedRoundId) && validateOracleRound(_oracle, _queriedRoundId).length == 0;
+      return delayed(oracleAddress, queriedRoundId) && validateOracleRound(oracleAddress, queriedRoundId).length == 0;
     }
   }
 
-  function oracleRoundStateSuggestRound(address _oracle)
+  function oracleRoundStateSuggestRound(address oracleAddress)
     private
     view
     returns (
-      bool _eligibleToSubmit,
-      uint32 _roundId,
-      int256 _latestSubmission,
-      uint64 _startedAt,
-      uint64 _timeout,
-      uint128 _availableFunds,
-      uint8 _oracleCount,
-      uint128 _paymentAmount
+      bool eligibleToSubmit,
+      uint32 roundId,
+      int256 latestSubmission,
+      uint64 startedAt,
+      uint64 timeoutSeconds,
+      uint128 availableFunds,
+      uint8 numberOfOracles,
+      uint128 linkPaymentAmount
     )
   {
     Round storage round = rounds[0];
-    OracleStatus storage oracle = oracles[_oracle];
+    OracleStatus storage oracle = oracles[oracleAddress];
 
     bool shouldSupersede = oracle.lastReportedRound == reportingRoundId || !acceptingSubmissions(reportingRoundId);
     // Instead of nudging oracles to submit to the next round, the inclusion of
     // the shouldSupersede bool in the if condition pushes them towards
     // submitting in a currently open round.
     if (supersedable(reportingRoundId) && shouldSupersede) {
-      _roundId = reportingRoundId.add(1);
-      round = rounds[_roundId];
+      roundId = reportingRoundId.add(1);
+      round = rounds[roundId];
 
-      _paymentAmount = paymentAmount;
-      _eligibleToSubmit = delayed(_oracle, _roundId);
+      linkPaymentAmount = paymentAmount;
+      eligibleToSubmit = delayed(oracleAddress, roundId);
     } else {
-      _roundId = reportingRoundId;
-      round = rounds[_roundId];
+      roundId = reportingRoundId;
+      round = rounds[roundId];
 
-      _paymentAmount = details[_roundId].paymentAmount;
-      _eligibleToSubmit = acceptingSubmissions(_roundId);
+      linkPaymentAmount = details[roundId].paymentAmount;
+      eligibleToSubmit = acceptingSubmissions(roundId);
     }
 
-    if (validateOracleRound(_oracle, _roundId).length != 0) {
-      _eligibleToSubmit = false;
+    if (validateOracleRound(oracleAddress, roundId).length != 0) {
+      eligibleToSubmit = false;
     }
 
     return (
-      _eligibleToSubmit,
-      _roundId,
+      eligibleToSubmit,
+      roundId,
       oracle.latestSubmission,
       round.startedAt,
-      details[_roundId].timeout,
+      details[roundId].timeout,
       recordedFunds.available,
       oracleCount(),
-      _paymentAmount
+      linkPaymentAmount
     );
   }
 
-  function updateRoundAnswer(uint32 _roundId)
+  function updateRoundAnswer(uint32 roundId)
     internal
     returns (bool, int256)
   {
-    if (details[_roundId].submissions.length < details[_roundId].minSubmissions) {
+    if (details[roundId].submissions.length < details[roundId].minSubmissions) {
       return (false, 0);
     }
 
-    int256 newAnswer = Median.calculateInplace(details[_roundId].submissions);
-    rounds[_roundId].answer = newAnswer;
-    rounds[_roundId].updatedAt = uint64(block.timestamp);
-    rounds[_roundId].answeredInRound = _roundId;
-    latestRoundId = _roundId;
+    int256 newAnswer = Median.calculateInplace(details[roundId].submissions);
+    rounds[roundId].answer = newAnswer;
+    rounds[roundId].updatedAt = uint64(block.timestamp);
+    rounds[roundId].answeredInRound = roundId;
+    latestRoundId = roundId;
 
-    emit AnswerUpdated(newAnswer, _roundId, block.timestamp);
+    emit AnswerUpdated(newAnswer, roundId, block.timestamp);
 
     return (true, newAnswer);
   }
 
   function validateAnswer(
-    uint32 _roundId,
-    int256 _newAnswer
+    uint32 roundId,
+    int256 newAnswer
   )
     private
   {
     AggregatorValidatorInterface av = validator; // cache storage reads
     if (address(av) == address(0)) return;
 
-    uint32 prevRound = _roundId.sub(1);
+    uint32 prevRound = roundId.sub(1);
     uint32 prevAnswerRoundId = rounds[prevRound].answeredInRound;
     int256 prevRoundAnswer = rounds[prevRound].answer;
     // We do not want the validator to ever prevent reporting, so we limit its
@@ -867,15 +870,15 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
     try av.validate{gas: VALIDATOR_GAS_LIMIT}(
       prevAnswerRoundId,
       prevRoundAnswer,
-      _roundId,
-      _newAnswer
+      roundId,
+      newAnswer
     ) {} catch {}
   }
 
-  function payOracle(uint32 _roundId)
+  function payOracle(uint32 roundId)
     private
   {
-    uint128 payment = details[_roundId].paymentAmount;
+    uint128 payment = details[roundId].paymentAmount;
     Funds memory funds = recordedFunds;
     funds.available = funds.available.sub(payment);
     funds.allocated = funds.allocated.add(payment);
@@ -885,54 +888,54 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
     emit AvailableFundsUpdated(funds.available);
   }
 
-  function recordSubmission(int256 _submission, uint32 _roundId)
+  function recordSubmission(int256 submission, uint32 roundId)
     private
   {
-    require(acceptingSubmissions(_roundId), "round not accepting submissions");
+    require(acceptingSubmissions(roundId), "round not accepting submissions");
 
-    details[_roundId].submissions.push(_submission);
-    oracles[msg.sender].lastReportedRound = _roundId;
-    oracles[msg.sender].latestSubmission = _submission;
+    details[roundId].submissions.push(submission);
+    oracles[msg.sender].lastReportedRound = roundId;
+    oracles[msg.sender].latestSubmission = submission;
 
-    emit SubmissionReceived(_submission, _roundId, msg.sender);
+    emit SubmissionReceived(submission, roundId, msg.sender);
   }
 
-  function deleteRoundDetails(uint32 _roundId)
+  function deleteRoundDetails(uint32 roundId)
     private
   {
-    if (details[_roundId].submissions.length < details[_roundId].maxSubmissions) return;
+    if (details[roundId].submissions.length < details[roundId].maxSubmissions) return;
 
-    delete details[_roundId];
+    delete details[roundId];
   }
 
-  function timedOut(uint32 _roundId)
+  function timedOut(uint32 roundId)
     private
     view
     returns (bool)
   {
-    uint64 startedAt = rounds[_roundId].startedAt;
-    uint32 roundTimeout = details[_roundId].timeout;
+    uint64 startedAt = rounds[roundId].startedAt;
+    uint32 roundTimeout = details[roundId].timeout;
     return startedAt > 0 && roundTimeout > 0 && startedAt.add(roundTimeout) < block.timestamp;
   }
 
-  function getStartingRound(address _oracle)
+  function getStartingRound(address oracleAddress)
     private
     view
     returns (uint32)
   {
     uint32 currentRound = reportingRoundId;
-    if (currentRound != 0 && currentRound == oracles[_oracle].endingRound) {
+    if (currentRound != 0 && currentRound == oracles[oracleAddress].endingRound) {
       return currentRound;
     }
     return currentRound.add(1);
   }
 
-  function previousAndCurrentUnanswered(uint32 _roundId, uint32 _rrId)
+  function previousAndCurrentUnanswered(uint32 roundId, uint32 rrId)
     private
     view
     returns (bool)
   {
-    return _roundId.add(1) == _rrId && rounds[_rrId].updatedAt == 0;
+    return roundId.add(1) == rrId && rounds[rrId].updatedAt == 0;
   }
 
   function requiredReserve(uint256 payment)
@@ -944,108 +947,108 @@ contract FluxAggregator is AggregatorV2V3Interface, Owned {
   }
 
   function addOracle(
-    address _oracle,
-    address _admin
+    address oracleAddress,
+    address adminAddress
   )
     private
   {
-    require(!oracleEnabled(_oracle), "oracle already enabled");
+    require(!oracleEnabled(oracleAddress), "oracle already enabled");
 
-    require(_admin != address(0), "cannot set admin to 0");
-    require(oracles[_oracle].admin == address(0) || oracles[_oracle].admin == _admin, "owner cannot overwrite admin");
+    require(adminAddress != address(0), "cannot set admin to 0");
+    require(oracles[oracleAddress].admin == address(0) || oracles[oracleAddress].admin == adminAddress, "owner cannot overwrite admin");
 
-    oracles[_oracle].startingRound = getStartingRound(_oracle);
-    oracles[_oracle].endingRound = ROUND_MAX;
-    oracles[_oracle].index = uint16(oracleAddresses.length);
-    oracleAddresses.push(_oracle);
-    oracles[_oracle].admin = _admin;
+    oracles[oracleAddress].startingRound = getStartingRound(oracleAddress);
+    oracles[oracleAddress].endingRound = ROUND_MAX;
+    oracles[oracleAddress].index = uint16(oracleAddresses.length);
+    oracleAddresses.push(oracleAddress);
+    oracles[oracleAddress].admin = adminAddress;
 
-    emit OraclePermissionsUpdated(_oracle, true);
-    emit OracleAdminUpdated(_oracle, _admin);
+    emit OraclePermissionsUpdated(oracleAddress, true);
+    emit OracleAdminUpdated(oracleAddress, adminAddress);
   }
 
   function removeOracle(
-    address _oracle
+    address oracleAddress
   )
     private
   {
-    require(oracleEnabled(_oracle), "oracle not enabled");
+    require(oracleEnabled(oracleAddress), "oracle not enabled");
 
-    oracles[_oracle].endingRound = reportingRoundId.add(1);
+    oracles[oracleAddress].endingRound = reportingRoundId.add(1);
     address tail = oracleAddresses[uint256(oracleCount()).sub(1)];
-    uint16 index = oracles[_oracle].index;
+    uint16 index = oracles[oracleAddress].index;
     oracles[tail].index = index;
-    delete oracles[_oracle].index;
+    delete oracles[oracleAddress].index;
     oracleAddresses[index] = tail;
     oracleAddresses.pop();
 
-    emit OraclePermissionsUpdated(_oracle, false);
+    emit OraclePermissionsUpdated(oracleAddress, false);
   }
 
-  function validateOracleRound(address _oracle, uint32 _roundId)
+  function validateOracleRound(address oracleAddress, uint32 roundId)
     private
     view
     returns (bytes memory)
   {
     // cache storage reads
-    uint32 startingRound = oracles[_oracle].startingRound;
+    uint32 startingRound = oracles[oracleAddress].startingRound;
     uint32 rrId = reportingRoundId;
 
     if (startingRound == 0) return "not enabled oracle";
-    if (startingRound > _roundId) return "not yet enabled oracle";
-    if (oracles[_oracle].endingRound < _roundId) return "no longer allowed oracle";
-    if (oracles[_oracle].lastReportedRound >= _roundId) return "cannot report on previous rounds";
-    if (_roundId != rrId && _roundId != rrId.add(1) && !previousAndCurrentUnanswered(_roundId, rrId)) return "invalid round to report";
-    if (_roundId != 1 && !supersedable(_roundId.sub(1))) return "previous round not supersedable";
+    if (startingRound > roundId) return "not yet enabled oracle";
+    if (oracles[oracleAddress].endingRound < roundId) return "no longer allowed oracle";
+    if (oracles[oracleAddress].lastReportedRound >= roundId) return "cannot report on previous rounds";
+    if (roundId != rrId && roundId != rrId.add(1) && !previousAndCurrentUnanswered(roundId, rrId)) return "invalid round to report";
+    if (roundId != 1 && !supersedable(roundId.sub(1))) return "previous round not supersedable";
   }
 
-  function supersedable(uint32 _roundId)
+  function supersedable(uint32 roundId)
     private
     view
     returns (bool)
   {
-    return rounds[_roundId].updatedAt > 0 || timedOut(_roundId);
+    return rounds[roundId].updatedAt > 0 || timedOut(roundId);
   }
 
-  function oracleEnabled(address _oracle)
+  function oracleEnabled(address oracleAddress)
     private
     view
     returns (bool)
   {
-    return oracles[_oracle].endingRound == ROUND_MAX;
+    return oracles[oracleAddress].endingRound == ROUND_MAX;
   }
 
-  function acceptingSubmissions(uint32 _roundId)
+  function acceptingSubmissions(uint32 roundId)
     private
     view
     returns (bool)
   {
-    return details[_roundId].maxSubmissions != 0;
+    return details[roundId].maxSubmissions != 0;
   }
 
-  function delayed(address _oracle, uint32 _roundId)
+  function delayed(address oracleAddress, uint32 roundId)
     private
     view
     returns (bool)
   {
-    uint256 lastStarted = oracles[_oracle].lastStartedRound;
-    return _roundId > lastStarted + restartDelay || lastStarted == 0;
+    uint256 lastStarted = oracles[oracleAddress].lastStartedRound;
+    return roundId > lastStarted + restartDelay || lastStarted == 0;
   }
 
-  function newRound(uint32 _roundId)
+  function newRound(uint32 roundId)
     private
     view
     returns (bool)
   {
-    return _roundId == reportingRoundId.add(1);
+    return roundId == reportingRoundId.add(1);
   }
 
-  function validRoundId(uint256 _roundId)
+  function validRoundId(uint256 roundId)
     private
     view
     returns (bool)
   {
-    return _roundId <= ROUND_MAX;
+    return roundId <= ROUND_MAX;
   }
 
 }
