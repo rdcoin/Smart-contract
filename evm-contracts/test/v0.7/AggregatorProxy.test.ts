@@ -338,7 +338,7 @@ describe('AggregatorProxy', () => {
           const proxyId = phaseId.add(aggId)
 
           const round = await proxy.getRoundData(proxyId)
-          matchers.bigNum(proxyId, round.roundId)
+          matchers.bigNum(proxyId, round.id)
           matchers.bigNum(response, round.answer)
           const nowSeconds = new Date().valueOf() / 1000
           assert.isAbove(round.updatedAt.toNumber(), nowSeconds - 120)
@@ -368,7 +368,7 @@ describe('AggregatorProxy', () => {
         const proxyId = phaseId.add(aggId)
 
         const round = await proxy.getRoundData(proxyId)
-        matchers.bigNum(proxyId, round.roundId)
+        matchers.bigNum(proxyId, round.id)
         matchers.bigNum(response2, round.answer)
         matchers.bigNum(42, round.startedAt)
         matchers.bigNum(77, round.updatedAt)
@@ -389,7 +389,7 @@ describe('AggregatorProxy', () => {
       const proxyId = oldphaseId.add(aggId)
 
       const round = await proxy.getRoundData(proxyId)
-      matchers.bigNum(proxyId, round.roundId)
+      matchers.bigNum(proxyId, round.id)
       matchers.bigNum(response, round.answer)
       const nowSeconds = new Date().valueOf() / 1000
       assert.isAbove(round.startedAt.toNumber(), nowSeconds - 120)
@@ -432,7 +432,7 @@ describe('AggregatorProxy', () => {
           const proxyId = phaseId.add(aggId)
 
           const round = await proxy.latestRoundData()
-          matchers.bigNum(proxyId, round.roundId)
+          matchers.bigNum(proxyId, round.id)
           matchers.bigNum(response2, round.answer)
           const nowSeconds = new Date().valueOf() / 1000
           assert.isAbove(round.updatedAt.toNumber(), nowSeconds - 120)
@@ -474,7 +474,7 @@ describe('AggregatorProxy', () => {
         const proxyId = phaseId.add(aggId)
 
         const round = await proxy.latestRoundData()
-        matchers.bigNum(proxyId, round.roundId)
+        matchers.bigNum(proxyId, round.id)
         matchers.bigNum(response2, round.answer)
         matchers.bigNum(42, round.startedAt)
         matchers.bigNum(77, round.updatedAt)
@@ -629,7 +629,7 @@ describe('AggregatorProxy', () => {
       it('returns the data for the proposed aggregator', async () => {
         const roundId = await aggregator2.latestRound()
         const round = await proxy.proposedGetRoundData(roundId)
-        matchers.bigNum(roundId, round.roundId)
+        matchers.bigNum(roundId, round.id)
         matchers.bigNum(response2, round.answer)
       })
 
@@ -670,7 +670,7 @@ describe('AggregatorProxy', () => {
       it('returns the data for the proposed aggregator', async () => {
         const roundId = await aggregator2.latestRound()
         const round = await proxy.proposedLatestRoundData()
-        matchers.bigNum(roundId, round.roundId)
+        matchers.bigNum(roundId, round.id)
         matchers.bigNum(response2, round.answer)
       })
 
