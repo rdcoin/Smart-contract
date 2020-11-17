@@ -1,7 +1,7 @@
 pragma solidity ^0.7.0;
 
 library SignedSafeMath {
-  int256 constant private _INT256_MIN = -2**255;
+  int256 constant private INT256_MIN = -2**255;
 
   /**
    * @dev Multiplies two signed integers, reverts on overflow.
@@ -14,7 +14,7 @@ library SignedSafeMath {
       return 0;
     }
 
-    require(!(a == -1 && b == _INT256_MIN), "SignedSafeMath: multiplication overflow");
+    require(!(a == -1 && b == INT256_MIN), "SignedSafeMath: multiplication overflow");
 
     int256 c = a * b;
     require(c / a == b, "SignedSafeMath: multiplication overflow");
@@ -27,7 +27,7 @@ library SignedSafeMath {
    */
   function div(int256 a, int256 b) internal pure returns (int256) {
     require(b != 0, "SignedSafeMath: division by zero");
-    require(!(b == -1 && a == _INT256_MIN), "SignedSafeMath: division overflow");
+    require(!(b == -1 && a == INT256_MIN), "SignedSafeMath: division overflow");
 
     int256 c = a / b;
 
@@ -60,15 +60,15 @@ library SignedSafeMath {
    * @dev If the result is not an integer, it is rounded towards zero. For example,
    * avg(-3, -4) = -3
    */
-  function avg(int256 _a, int256 _b)
+  function avg(int256 a, int256 b)
     internal
     pure
     returns (int256)
   {
-    if ((_a < 0 && _b > 0) || (_a > 0 && _b < 0)) {
-      return add(_a, _b) / 2;
+    if ((a < 0 && b > 0) || (a > 0 && b < 0)) {
+      return add(a, b) / 2;
     }
-    int256 remainder = (_a % 2 + _b % 2) / 2;
-    return add(add(_a / 2, _b / 2), remainder);
+    int256 remainder = (a % 2 + b % 2) / 2;
+    return add(add(a / 2, b / 2), remainder);
   }
 }
