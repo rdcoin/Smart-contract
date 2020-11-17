@@ -26,15 +26,15 @@ contract Owned {
    * @dev Allows an owner to begin transferring ownership to a new address,
    * pending.
    */
-  function transferOwnership(address _to)
+  function transferOwnership(address to)
     external
     onlyOwner()
   {
-    require(_to != msg.sender, "Cannot transfer to self");
+    require(to != msg.sender, "Cannot transfer to self");
 
-    pendingOwner = _to;
+    pendingOwner = to;
 
-    emit OwnershipTransferRequested(owner, _to);
+    emit OwnershipTransferRequested(owner, to);
   }
 
   /**
