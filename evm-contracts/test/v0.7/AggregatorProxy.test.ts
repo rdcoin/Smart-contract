@@ -11,7 +11,7 @@ import { MockV2AggregatorFactory } from '../../ethers/v0.7/MockV2AggregatorFacto
 import { MockV3AggregatorFactory } from '../../ethers/v0.7/MockV3AggregatorFactory'
 import { AggregatorProxyFactory } from '../../ethers/v0.7/AggregatorProxyFactory'
 import { AggregatorFacadeFactory } from '../../ethers/v0.7/AggregatorFacadeFactory'
-import { FluxAggregatorFactory } from '../../ethers/v0.7/FluxAggregatorFactory'
+import { FluxAggregatorFactory } from '../../ethers/v0.6/FluxAggregatorFactory'
 import { ReverterFactory } from '../../ethers/v0.7/ReverterFactory'
 
 let personas: setup.Personas
