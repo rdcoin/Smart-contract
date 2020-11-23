@@ -39,6 +39,7 @@ import (
 	"github.com/smartcontractkit/chainlink/core/store/presenters"
 	"github.com/smartcontractkit/chainlink/core/utils"
 	"github.com/smartcontractkit/chainlink/core/web"
+	ocrtypes "github.com/smartcontractkit/libocr/offchainreporting/types"
 
 	"github.com/DATA-DOG/go-txdb"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -82,6 +83,8 @@ const (
 	AllowUnstarted = "allow_unstarted"
 	// DefaultPeerID is the peer ID of the fixture p2p key
 	DefaultPeerID = "12D3KooWCJUPKsYAnCRTQ7SUNULt4Z9qF8Uk1xadhCs7e9M711Lp"
+	// A peer ID without an associated p2p key.
+	NonExistentPeerID = "12D3KooWAdCzaesXyezatDzgGvCngqsBqoUqnV9PnVc46jsVt2i9"
 	// DefaultOCRKeyBundleID is the ID of the fixture ocr key bundle
 	DefaultOCRKeyBundleID = "54f02f2756952ee42874182c8a03d51f048b7fc245c05196af50f9266f8e444a"
 	// DefaultKeyJSON is the JSON for the default key encrypted with fast scrypt and password 'password'
@@ -93,6 +96,7 @@ var (
 	DefaultKeyAddress      = common.HexToAddress(DefaultKey)
 	DefaultKeyAddressEIP55 models.EIP55Address
 	DefaultP2PPeerID       p2ppeer.ID
+	NonExistentP2PPeerID   p2ppeer.ID
 	// DefaultOCRKeyBundleIDSha256 is the ID of the fixture ocr key bundle
 	DefaultOCRKeyBundleIDSha256 models.Sha256Hash
 )
@@ -135,6 +139,10 @@ func init() {
 	rand.Seed(seed)
 
 	DefaultP2PPeerID, err = p2ppeer.Decode(DefaultPeerID)
+	if err != nil {
+		panic(err)
+	}
+	NonExistentP2PPeerID, err = p2ppeer.Decode(NonExistentPeerID)
 	if err != nil {
 		panic(err)
 	}
@@ -874,7 +882,7 @@ func CreateExternalInitiatorViaWeb(
 }
 
 const (
-	DBWaitTimeout = 5 * time.Second
+	DBWaitTimeout = 10 * time.Second
 	// DBPollingInterval can't be too short to avoid DOSing the test database
 	DBPollingInterval = 100 * time.Millisecond
 )
@@ -1059,11 +1067,25 @@ func WaitForEthTxCount(t testing.TB, store *strpkg.Store, want int) []models.Eth
 	var txes []models.EthTx
 	var err error
 	g.Eventually(func() []models.EthTx {
-		err = store.DB.Find(&txes).Error
+		err = store.DB.Order("nonce desc").Find(&txes).Error
 		assert.NoError(t, err)
 		return txes
 	}, DBWaitTimeout, DBPollingInterval).Should(gomega.HaveLen(want))
 	return txes
+}
+
+func WaitForEthTxAttemptsForEthTx(t testing.TB, store *strpkg.Store, ethTx models.EthTx) []models.EthTxAttempt {
+	t.Helper()
+	g := gomega.NewGomegaWithT(t)
+
+	var attempts []models.EthTxAttempt
+	var err error
+	g.Eventually(func() int {
+		err = store.DB.Order("created_at desc").Where("eth_tx_id = ?", ethTx.ID).Find(&attempts).Error
+		assert.NoError(t, err)
+		return len(attempts)
+	}, DBWaitTimeout, DBPollingInterval).Should(gomega.BeNumerically(">", 0))
+	return attempts
 }
 
 func WaitForEthTxAttemptCount(t testing.TB, store *strpkg.Store, want int) []models.EthTxAttempt {
@@ -1180,16 +1202,6 @@ func BlockWithTransactions(gasPrices ...int64) *types.Block {
 		txs[i] = types.NewTransaction(0, common.Address{}, nil, 0, big.NewInt(gasPrice), nil)
 	}
 	return types.NewBlock(&types.Header{}, txs, nil, nil, new(trie.Trie))
-}
-
-// GetAccountAddress returns Address of the account in the keystore of the passed in store
-func GetAccountAddress(t testing.TB, store *strpkg.Store) common.Address {
-	t.Helper()
-
-	account, err := store.KeyStore.GetFirstAccount()
-	require.NoError(t, err)
-
-	return account.Address
 }
 
 func StringToHash(s string) common.Hash {
@@ -1462,4 +1474,31 @@ func MustDefaultKey(t *testing.T, s *strpkg.Store) models.Key {
 	k, err := s.KeyByAddress(common.HexToAddress(DefaultKey))
 	require.NoError(t, err)
 	return k
+}
+
+func RandomizeNonce(t *testing.T, s *strpkg.Store) {
+	t.Helper()
+	n := rand.Intn(32767) + 100
+	err := s.DB.Exec(`UPDATE keys SET next_nonce = ?`, n).Error
+	require.NoError(t, err)
+}
+
+func MakeConfigDigest(t *testing.T) ocrtypes.ConfigDigest {
+	t.Helper()
+	b := make([]byte, 16)
+	/* #nosec G404 */
+	_, err := rand.Read(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return MustBytesToConfigDigest(t, b)
+}
+
+func MustBytesToConfigDigest(t *testing.T, b []byte) ocrtypes.ConfigDigest {
+	t.Helper()
+	configDigest, err := ocrtypes.BytesToConfigDigest(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return configDigest
 }

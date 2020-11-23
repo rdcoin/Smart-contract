@@ -22,6 +22,7 @@ import (
 	"github.com/smartcontractkit/chainlink/core/logger"
 	"github.com/smartcontractkit/chainlink/core/services/bulletprooftxmanager"
 	"github.com/smartcontractkit/chainlink/core/services/chainlink"
+	"github.com/smartcontractkit/chainlink/core/static"
 	strpkg "github.com/smartcontractkit/chainlink/core/store"
 	"github.com/smartcontractkit/chainlink/core/store/migrations"
 	"github.com/smartcontractkit/chainlink/core/store/models"
@@ -48,7 +49,7 @@ func (cli *Client) RunNode(c *clipkg.Context) error {
 
 	updateConfig(cli.Config, c.Bool("debug"), c.Int64("replay-from-block"))
 	logger.SetLogger(cli.Config.CreateProductionLogger())
-	logger.Infow("Starting Chainlink Node " + strpkg.Version + " at commit " + strpkg.Sha)
+	logger.Infow("Starting Chainlink Node " + static.Version + " at commit " + static.Sha)
 
 	app := cli.AppFactory.NewApplication(cli.Config, func(app chainlink.Application) {
 		store := app.GetStore()
@@ -207,18 +208,13 @@ func logIfNonceOutOfSync(store *strpkg.Store, key models.Key) {
 		logger.Error(fmt.Sprintf("error determining nonce for address %s: %v", key.Address.Hex(), err))
 		return
 	}
-	localNonce, err := store.GetLastNonce(key.Address.Address())
-	if err != nil {
-		logger.Error("database error when checking nonce: ", err)
-		return
+	var nonce int64
+	if key.NextNonce != nil {
+		nonce = *key.NextNonce
 	}
-	if localNonceIsNotCurrent(localNonce, onChainNonce) {
+	if nonce < int64(onChainNonce) {
 		logger.Warn(fmt.Sprintf("The account %s is being used by another wallet and is not safe to use with chainlink", key.Address.Hex()))
 	}
-}
-
-func localNonceIsNotCurrent(localNonce, onChainNonce uint64) bool {
-	return localNonce+1 < onChainNonce
 }
 
 func updateConfig(config *orm.Config, debug bool, replayFromBlock int64) {

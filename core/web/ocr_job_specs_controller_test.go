@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
+
+	"github.com/smartcontractkit/chainlink/core/services/job"
+
 	"github.com/smartcontractkit/chainlink/core/internal/cltest"
 	"github.com/smartcontractkit/chainlink/core/services/offchainreporting"
 	"github.com/smartcontractkit/chainlink/core/store/models"
@@ -19,19 +22,56 @@ import (
 )
 
 func TestOCRJobSpecsController_Create_ValidationFailure(t *testing.T) {
-	_, client, cleanup := setupOCRJobSpecsControllerTests(t)
-	defer cleanup()
+	var (
+		contractAddress    = cltest.NewEIP55Address()
+		monitoringEndpoint = "chain.link:101"
+	)
 
-	body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
-		TOML: string(cltest.MustReadFile(t, "testdata/oracle-spec-invalid-key.toml")),
-	})
-	resp, cleanup := client.Post("/v2/ocr/specs", bytes.NewReader(body))
-	defer cleanup()
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
-	b, err := ioutil.ReadAll(resp.Body)
-	require.NoError(t, err)
-	assert.Equal(t, "{\"errors\":[{\"detail\":\"isBootstrapPeer is not defined\"}]}", string(b))
+	var tt = []struct {
+		name        string
+		pid         models.PeerID
+		kb          models.Sha256Hash
+		ta          models.EIP55Address
+		expectedErr error
+	}{
+		{
+			name:        "invalid keybundle",
+			pid:         models.PeerID(cltest.DefaultP2PPeerID),
+			kb:          models.Sha256Hash(cltest.Random32Byte()),
+			ta:          cltest.DefaultKeyAddressEIP55,
+			expectedErr: job.ErrNoSuchKeyBundle,
+		},
+		{
+			name:        "invalid peerID",
+			pid:         models.PeerID(cltest.NonExistentP2PPeerID),
+			kb:          cltest.DefaultOCRKeyBundleIDSha256,
+			ta:          cltest.DefaultKeyAddressEIP55,
+			expectedErr: job.ErrNoSuchPeerID,
+		},
+		{
+			name:        "invalid transmitter address",
+			pid:         models.PeerID(cltest.DefaultP2PPeerID),
+			kb:          cltest.DefaultOCRKeyBundleIDSha256,
+			ta:          cltest.NewEIP55Address(),
+			expectedErr: job.ErrNoSuchTransmitterAddress,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			_, client, cleanup := setupOCRJobSpecsControllerTests(t)
+			defer cleanup()
+			sp := cltest.MinimalOCRNonBootstrapSpec(contractAddress, tc.ta, tc.pid, monitoringEndpoint, tc.kb)
+			body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
+				TOML: sp,
+			})
+			resp, cleanup := client.Post("/v2/ocr/specs", bytes.NewReader(body))
+			defer cleanup()
+			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+			b, err := ioutil.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(b), tc.expectedErr.Error())
+		})
+	}
 }
 
 func TestOCRJobSpecsController_Create_HappyPath(t *testing.T) {
@@ -159,7 +199,10 @@ func setupOCRJobSpecsWControllerTestsWithJob(t *testing.T) (cltest.HTTPClientCle
 	client := app.NewHTTPClient()
 
 	var ocrJobSpecFromFile offchainreporting.OracleSpec
-	toml.DecodeFile("testdata/oracle-spec.toml", &ocrJobSpecFromFile)
+	tree, err := toml.LoadFile("testdata/oracle-spec.toml")
+	require.NoError(t, err)
+	err = tree.Unmarshal(&ocrJobSpecFromFile)
+	require.NoError(t, err)
 	jobID, _ := app.AddJobV2(context.Background(), ocrJobSpecFromFile)
 	return client, cleanup, ocrJobSpecFromFile, jobID
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -88,7 +89,7 @@ type EnvPrinter struct {
 	EthHeadTrackerMaxBufferSize           uint            `json:"ethHeadTrackerMaxBufferSize"`
 	EthMaxGasPriceWei                     *big.Int        `json:"ethMaxGasPriceWei"`
 	EthereumURL                           string          `json:"ethUrl"`
-	EthereumSecondaryURL                  string          `json:"ethSecondaryURL"`
+	EthereumSecondaryURLs                 []url.URL       `json:"ethSecondaryURLs"`
 	ExplorerURL                           string          `json:"explorerUrl"`
 	FeatureExternalInitiators             bool            `json:"featureExternalInitiators"`
 	FeatureFluxMonitor                    bool            `json:"featureFluxMonitor"`
@@ -142,17 +143,12 @@ type EnvPrinter struct {
 // NewConfigPrinter creates an instance of ConfigPrinter
 func NewConfigPrinter(store *store.Store) (ConfigPrinter, error) {
 	config := store.Config
-	account, err := store.KeyStore.GetFirstAccount()
-	if err != nil {
-		return ConfigPrinter{}, err
-	}
 
 	explorerURL := ""
 	if config.ExplorerURL() != nil {
 		explorerURL = config.ExplorerURL().String()
 	}
 	return ConfigPrinter{
-		AccountAddress: account.Address.Hex(),
 		EnvPrinter: EnvPrinter{
 			AllowOrigins:                          config.AllowOrigins(),
 			BalanceMonitorEnabled:                 config.BalanceMonitorEnabled(),
@@ -178,7 +174,7 @@ func NewConfigPrinter(store *store.Store) (ConfigPrinter, error) {
 			EthHeadTrackerMaxBufferSize:           config.EthHeadTrackerMaxBufferSize(),
 			EthMaxGasPriceWei:                     config.EthMaxGasPriceWei(),
 			EthereumURL:                           config.EthereumURL(),
-			EthereumSecondaryURL:                  config.EthereumSecondaryURL(),
+			EthereumSecondaryURLs:                 config.EthereumSecondaryURLs(),
 			ExplorerURL:                           explorerURL,
 			FeatureExternalInitiators:             config.FeatureExternalInitiators(),
 			FeatureFluxMonitor:                    config.FeatureFluxMonitor(),

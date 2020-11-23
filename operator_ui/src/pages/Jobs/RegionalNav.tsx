@@ -4,6 +4,7 @@ import Dialog from '@material-ui/core/Dialog'
 import Grid from '@material-ui/core/Grid'
 import List from '@material-ui/core/List'
 import ListItem from '@material-ui/core/ListItem'
+import Badge from '@material-ui/core/Badge'
 import {
   createStyles,
   Theme,
@@ -28,6 +29,13 @@ import { JobData } from './sharedTypes'
 
 const styles = (theme: Theme) =>
   createStyles({
+    badgePadding: {
+      paddingLeft: theme.spacing.unit * 2,
+      paddingRight: theme.spacing.unit * 2,
+      marginLeft: theme.spacing.unit * -2,
+      marginRight: theme.spacing.unit * -2,
+      lineHeight: '1rem',
+    },
     container: {
       backgroundColor: theme.palette.common.white,
       padding: theme.spacing.unit * 5,
@@ -48,10 +56,11 @@ const styles = (theme: Theme) =>
     },
     horizontalNavItem: {
       display: 'inline',
+      paddingLeft: 0,
+      paddingRight: 0,
     },
     horizontalNavLink: {
-      paddingTop: theme.spacing.unit * 4,
-      paddingBottom: theme.spacing.unit * 4,
+      padding: `${theme.spacing.unit * 4}px ${theme.spacing.unit * 4}px`,
       textDecoration: 'none',
       display: 'inline-block',
       borderBottom: 'solid 1px',
@@ -121,8 +130,9 @@ interface Props extends WithStyles<typeof styles> {
   deleteJobSpec: Function
   jobSpecId: string
   job: JobData['job']
+  runsCount: JobData['recentRunsCount']
   url: string
-  getJobSpecRuns: () => Promise<void>
+  getJobSpecRuns: (props: { page?: number; size?: number }) => Promise<void>
 }
 
 const RegionalNavComponent = ({
@@ -132,23 +142,29 @@ const RegionalNavComponent = ({
   job,
   deleteJobSpec,
   getJobSpecRuns,
+  runsCount,
 }: Props) => {
   const location = useLocation()
   const navErrorsActive = location.pathname.endsWith('/errors')
   const navDefinitionActive = location.pathname.endsWith('/definition')
-  const navOverviewActive = !navDefinitionActive && !navErrorsActive
+  const navRunsActive = location.pathname.endsWith('/runs')
+  const navOverviewActive =
+    !navDefinitionActive && !navErrorsActive && !navRunsActive
   const [modalOpen, setModalOpen] = React.useState(false)
   const [archived, setArchived] = React.useState(false)
-  const errorsTabText =
-    job?.errors && job.errors.length > 0
-      ? `Errors (${job.errors.length})`
-      : 'Errors'
+
   const handleRun = () => {
-    createJobRun(
-      jobSpecId,
-      CreateRunSuccessNotification,
-      ErrorMessage,
-    ).then(() => getJobSpecRuns())
+    const params = new URLSearchParams(location.search)
+    const page = params.get('page')
+    const size = params.get('size')
+
+    createJobRun(jobSpecId, CreateRunSuccessNotification, ErrorMessage).then(
+      () =>
+        getJobSpecRuns({
+          page: page ? parseInt(page, 10) : undefined,
+          size: size ? parseInt(size, 10) : undefined,
+        }),
+    )
   }
   const handleDelete = (id: string) => {
     deleteJobSpec(
@@ -267,21 +283,21 @@ const RegionalNavComponent = ({
                         </Button>
                       )}
                     {job.definition && (
-                      <Button
-                        href={`/jobs/new?definition=${encodeURIComponent(
-                          JSON.stringify(job.definition),
-                        )}`}
-                        component={BaseLink}
-                        className={classes.regionalNavButton}
-                      >
-                        Duplicate
-                      </Button>
-                    )}
-                    {job.definition && (
-                      <CopyJobSpec
-                        JobSpec={job.definition}
-                        className={classes.regionalNavButton}
-                      />
+                      <>
+                        <Button
+                          href={`/jobs/new?definition=${encodeURIComponent(
+                            job.definition,
+                          )}`}
+                          component={BaseLink}
+                          className={classes.regionalNavButton}
+                        >
+                          Duplicate
+                        </Button>
+                        <CopyJobSpec
+                          JobSpec={job.definition}
+                          className={classes.regionalNavButton}
+                        />
+                      </>
                     )}
                   </>
                 )}
@@ -314,32 +330,56 @@ const RegionalNavComponent = ({
                   Overview
                 </Link>
               </ListItem>
-              {job?.type === 'Direct request' && (
-                <>
-                  <ListItem className={classes.horizontalNavItem}>
-                    <Link
-                      href={`/jobs/${jobSpecId}/definition`}
-                      className={classNames(
-                        classes.horizontalNavLink,
-                        navDefinitionActive && classes.activeNavLink,
-                      )}
+              <ListItem className={classes.horizontalNavItem}>
+                <Link
+                  href={`/jobs/${jobSpecId}/definition`}
+                  className={classNames(
+                    classes.horizontalNavLink,
+                    navDefinitionActive && classes.activeNavLink,
+                  )}
+                >
+                  Definition
+                </Link>
+              </ListItem>
+              <ListItem className={classes.horizontalNavItem}>
+                <Link
+                  href={`/jobs/${jobSpecId}/errors`}
+                  className={classNames(
+                    classes.horizontalNavLink,
+                    navErrorsActive && classes.activeNavLink,
+                  )}
+                >
+                  {job?.errors && job.errors.length > 0 ? (
+                    <Badge
+                      badgeContent={job.errors.length}
+                      color="error"
+                      className={classes.badgePadding}
                     >
-                      Definition
-                    </Link>
-                  </ListItem>
-                  <ListItem className={classes.horizontalNavItem}>
-                    <Link
-                      href={`/jobs/${jobSpecId}/errors`}
-                      className={classNames(
-                        classes.horizontalNavLink,
-                        navErrorsActive && classes.activeNavLink,
-                      )}
-                    >
-                      {errorsTabText}
-                    </Link>
-                  </ListItem>
-                </>
-              )}
+                      Errors
+                    </Badge>
+                  ) : (
+                    'Errors'
+                  )}
+                </Link>
+              </ListItem>
+              <ListItem className={classes.horizontalNavItem}>
+                <Link
+                  href={`/jobs/${jobSpecId}/runs`}
+                  className={classNames(
+                    classes.horizontalNavLink,
+                    navRunsActive && classes.activeNavLink,
+                  )}
+                >
+                  <Badge
+                    badgeContent={runsCount || 0}
+                    color="primary"
+                    className={classes.badgePadding}
+                    max={99999}
+                  >
+                    Runs
+                  </Badge>
+                </Link>
+              </ListItem>
             </List>
           </Grid>
         </Grid>

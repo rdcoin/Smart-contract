@@ -230,31 +230,6 @@ func (orm *ORM) FindJobRun(id *models.ID) (models.JobRun, error) {
 	return jr, err
 }
 
-// AllSyncEvents returns all sync events
-func (orm *ORM) AllSyncEvents(cb func(models.SyncEvent) error) error {
-	orm.MustEnsureAdvisoryLock()
-	return Batch(BatchSize, func(offset, limit uint) (uint, error) {
-		var events []models.SyncEvent
-		err := orm.DB.
-			Limit(limit).
-			Offset(offset).
-			Order("id, created_at asc").
-			Find(&events).Error
-		if err != nil {
-			return 0, err
-		}
-
-		for _, event := range events {
-			err = cb(event)
-			if err != nil {
-				return 0, err
-			}
-		}
-
-		return uint(len(events)), err
-	})
-}
-
 // NOTE: Copied verbatim from gorm master
 // Transaction start a transaction as a block,
 // return error will rollback, otherwise to commit.
@@ -738,19 +713,6 @@ func (orm *ORM) FindEthTxAttempt(hash common.Hash) (*models.EthTxAttempt, error)
 		return nil, errors.Wrap(err, "FindEthTxAttempt First(ethTxAttempt) failed")
 	}
 	return ethTxAttempt, nil
-}
-
-// GetLastNonce retrieves the last known nonce in the database for an account
-func (orm *ORM) GetLastNonce(address common.Address) (uint64, error) {
-	orm.MustEnsureAdvisoryLock()
-	var transaction models.EthTx
-	err := orm.DB.Order("nonce desc").Where(`"from_address" = ?`, address).First(&transaction).Error
-	if err == gorm.ErrRecordNotFound {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	}
-	return uint64(*transaction.Nonce), nil
 }
 
 // MarkRan will set Ran to true for a given initiator

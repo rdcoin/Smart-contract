@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
+	"github.com/pelletier/go-toml"
 	"github.com/smartcontractkit/chainlink/core/auth"
 	"github.com/smartcontractkit/chainlink/core/internal/cltest"
 	"github.com/smartcontractkit/chainlink/core/internal/mocks"
@@ -46,7 +46,7 @@ func TestClient_ListETHKeys(t *testing.T) {
 
 	assert.Nil(t, client.ListETHKeys(cltest.EmptyCLIContext()))
 	require.Equal(t, 1, len(r.Renders))
-	from := cltest.GetAccountAddress(t, app.GetStore())
+	from := cltest.DefaultKeyAddress
 	balances := *r.Renders[0].(*[]presenters.ETHKey)
 	assert.Equal(t, from.Hex(), balances[0].Address)
 }
@@ -778,7 +778,7 @@ func TestClient_IndexTransactions(t *testing.T) {
 	require.NoError(t, app.Start())
 
 	store := app.GetStore()
-	from := cltest.GetAccountAddress(t, store)
+	from := cltest.DefaultKeyAddress
 	tx := cltest.MustInsertConfirmedEthTxWithAttempt(t, store, 0, 1, from)
 	attempt := tx.EthTxAttempts[0]
 
@@ -814,7 +814,7 @@ func TestClient_ShowTransaction(t *testing.T) {
 	require.NoError(t, app.Start())
 
 	store := app.GetStore()
-	from := cltest.GetAccountAddress(t, store)
+	from := cltest.DefaultKeyAddress
 	tx := cltest.MustInsertConfirmedEthTxWithAttempt(t, store, 0, 1, from)
 	attempt := tx.EthTxAttempts[0]
 
@@ -837,7 +837,7 @@ func TestClient_IndexTxAttempts(t *testing.T) {
 	require.NoError(t, app.Start())
 
 	store := app.GetStore()
-	from := cltest.GetAccountAddress(t, store)
+	from := cltest.DefaultKeyAddress
 	tx := cltest.MustInsertConfirmedEthTxWithAttempt(t, store, 0, 1, from)
 
 	client, r := app.NewClientAndRenderer()
@@ -1129,7 +1129,11 @@ func TestClient_RunOCRJob_HappyPath(t *testing.T) {
 	client, _ := app.NewClientAndRenderer()
 
 	var ocrJobSpecFromFile offchainreporting.OracleSpec
-	toml.DecodeFile("testdata/oracle-spec.toml", &ocrJobSpecFromFile)
+	tree, err := toml.LoadFile("testdata/oracle-spec.toml")
+	require.NoError(t, err)
+	err = tree.Unmarshal(&ocrJobSpecFromFile)
+	require.NoError(t, err)
+
 	jobID, _ := app.AddJobV2(context.Background(), ocrJobSpecFromFile)
 
 	set := flag.NewFlagSet("test", 0)

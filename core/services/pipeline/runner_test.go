@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pelletier/go-toml"
+
 	"github.com/lib/pq"
 	"github.com/smartcontractkit/chainlink/core/services"
-
-	"github.com/BurntSushi/toml"
 
 	"github.com/smartcontractkit/chainlink/core/services/offchainreporting"
 	"github.com/smartcontractkit/chainlink/core/store/models"
@@ -313,7 +313,6 @@ func TestRunner(t *testing.T) {
 		p2pBootstrapPeers  = ["/dns4/chain.link/tcp/1234/p2p/16Uiu2HAm58SP7UL8zsnpeuwHfytLocaqgnyaYKP8wu7qRdrixLju"]
 		isBootstrapPeer    = false 
 		transmitterAddress = "%s"
-		monitoringEndpoint = "%s"
 		keyBundleID = "%s"
 		observationTimeout = "10s"
 		observationSource = """
@@ -333,8 +332,9 @@ ds1 -> ds1_parse;
 			},
 			Pipeline: *pipeline.NewTaskDAG(),
 		}
-		s := fmt.Sprintf(minimalNonBootstrapTemplate, cltest.NewEIP55Address(), ek.PeerID, cltest.DefaultKey, "chain.link:101", kb.ID)
-		_, err = services.ValidatedOracleSpec(s)
+
+		s := fmt.Sprintf(minimalNonBootstrapTemplate, cltest.NewEIP55Address(), ek.PeerID, cltest.DefaultKey, kb.ID)
+		_, err = services.ValidatedOracleSpecToml(s)
 		require.NoError(t, err)
 		err = toml.Unmarshal([]byte(s), &os)
 		require.NoError(t, err)
@@ -385,7 +385,7 @@ ds1 -> ds1_parse;
 			Pipeline: *pipeline.NewTaskDAG(),
 		}
 		s := fmt.Sprintf(minimalBootstrapTemplate, cltest.NewEIP55Address(), ek.PeerID)
-		_, err = services.ValidatedOracleSpec(s)
+		_, err = services.ValidatedOracleSpecToml(s)
 		require.NoError(t, err)
 		err = toml.Unmarshal([]byte(s), &os)
 		require.NoError(t, err)
@@ -463,6 +463,12 @@ ds1 -> ds1_parse;
 		require.NoError(t, err)
 		err = jobORM.DeleteJob(context.Background(), jb.ID)
 		require.NoError(t, err)
+		err = db.Find(&se).Error
+		require.NoError(t, err)
+		require.Len(t, se, 0)
+
+		// Noop once the job is gone.
+		jobORM.RecordError(context.Background(), jb.ID, "test")
 		err = db.Find(&se).Error
 		require.NoError(t, err)
 		require.Len(t, se, 0)

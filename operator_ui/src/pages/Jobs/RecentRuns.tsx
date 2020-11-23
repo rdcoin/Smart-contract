@@ -2,8 +2,6 @@ import { CardTitle, KeyValueList } from '@chainlink/styleguide'
 import {
   Card,
   Grid,
-  TableCell,
-  TableRow,
   Theme,
   Typography,
   WithStyles,
@@ -14,6 +12,7 @@ import Button from 'components/Button'
 import BaseLink from 'components/BaseLink'
 import Content from 'components/Content'
 import JobRunsList from 'components/JobRuns/List'
+import TaskListDag from 'components/Jobs/TaskListDag'
 import TaskList from 'components/Jobs/TaskList'
 import React from 'react'
 import { GWEI_PER_TOKEN } from 'utils/constants'
@@ -50,15 +49,17 @@ const chartCardStyles = ({ spacing, palette }: Theme) =>
       paddingBottom: spacing.unit * 2,
       paddingLeft: spacing.unit * 2,
     },
+    card: {
+      overflow: 'visible',
+    },
   })
 
 interface Props extends WithStyles<typeof chartCardStyles> {
   ErrorComponent: React.FC
   LoadingPlaceholder: React.FC
   error: unknown
-  getJobSpecRuns: () => Promise<void>
+  getJobSpecRuns: (props?: { page?: number; size?: number }) => Promise<void>
   job?: JobData['job']
-  jobSpec?: JobData['jobSpec']
   recentRuns?: JobData['recentRuns']
   recentRunsCount: JobData['recentRunsCount']
   showJobRunsCount?: number
@@ -72,7 +73,6 @@ export const RecentRuns = withStyles(chartCardStyles)(
     error,
     getJobSpecRuns,
     job,
-    jobSpec,
     recentRuns,
     recentRunsCount,
     showJobRunsCount = 5,
@@ -95,39 +95,38 @@ export const RecentRuns = withStyles(chartCardStyles)(
           <Grid container spacing={24}>
             <Grid item xs={8}>
               <Card>
-                <CardTitle divider>Recent Job Runs</CardTitle>
+                <CardTitle divider>Recent job runs</CardTitle>
 
                 {recentRuns && (
                   <>
                     <JobRunsList
-                      runs={recentRuns.map(
-                        (jobRun: NonNullable<JobData['recentRuns']>[0]) => ({
-                          ...jobRun,
-                        }),
-                      )}
+                      runs={recentRuns}
                       hideLinks={job?.type === 'Off-chain reporting'}
                     />
-                    {job?.type === 'Direct request' &&
-                      recentRuns.length > showJobRunsCount && (
-                        <TableRow>
-                          <TableCell>
-                            <div className={classes.runDetails}>
-                              <Button
-                                href={`/jobs/${job.id}/runs`}
-                                component={BaseLink}
-                              >
-                                View More
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
+                    {recentRunsCount > showJobRunsCount && (
+                      <div className={classes.runDetails}>
+                        <Button
+                          href={`/jobs/${job.id}/runs`}
+                          component={BaseLink}
+                        >
+                          View more
+                        </Button>
+                      </div>
+                    )}
                   </>
                 )}
               </Card>
             </Grid>
             <Grid item xs={4}>
-              {job?.type === 'Direct request' && jobSpec && (
+              {job?.type === 'Off-chain reporting' && (
+                <Grid item xs>
+                  <Card className={classes.card}>
+                    <CardTitle divider>Task List</CardTitle>
+                    <TaskListDag dotSource={job.dotDagSource} />
+                  </Card>
+                </Grid>
+              )}
+              {job?.type === 'Direct request' && (
                 <Grid container direction="column">
                   <Grid item xs>
                     <Card>
@@ -154,7 +153,6 @@ export const RecentRuns = withStyles(chartCardStyles)(
                     <KeyValueList
                       showHead={false}
                       entries={Object.entries({
-                        runCount: recentRunsCount,
                         initiator: formatInitiators(job.initiators),
                         minimumPayment: `${
                           formatMinPayment(Number(job.minPayment)) || 0

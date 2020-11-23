@@ -658,42 +658,6 @@ func TestORM_PendingBridgeType_success(t *testing.T) {
 	assert.Equal(t, retrievedBt, *bt)
 }
 
-func TestORM_GetLastNonce_StormNotFound(t *testing.T) {
-	t.Parallel()
-
-	app, cleanup := cltest.NewApplicationWithKey(t, cltest.LenientEthMock)
-	defer cleanup()
-	require.NoError(t, app.Start())
-	store := app.Store
-
-	account := cltest.GetAccountAddress(t, store)
-	nonce, err := store.GetLastNonce(account)
-
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(0), nonce)
-}
-
-func TestORM_GetLastNonce_Valid(t *testing.T) {
-	t.Parallel()
-	config, cleanup := cltest.NewConfig(t)
-	defer cleanup()
-	app, cleanup := cltest.NewApplicationWithConfigAndKey(t, config,
-		cltest.EthMockRegisterChainID,
-		cltest.EthMockRegisterGetBalance,
-	)
-	defer cleanup()
-
-	store := app.Store
-	assert.NoError(t, app.StartAndConnect())
-
-	cltest.MustInsertInProgressEthTxWithAttempt(t, store, 1)
-	account := cltest.GetAccountAddress(t, store)
-	nonce, err := store.GetLastNonce(account)
-
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(1), nonce)
-}
-
 func TestORM_MarkRan(t *testing.T) {
 	t.Parallel()
 
@@ -869,8 +833,7 @@ func TestORM_AllSyncEvents(t *testing.T) {
 	require.NoError(t, err)
 	defer explorerClient.Close()
 
-	orm := store.ORM
-	statsPusher := synchronization.NewStatsPusher(orm, explorerClient)
+	statsPusher := synchronization.NewStatsPusher(store.DB, explorerClient)
 	require.NoError(t, statsPusher.Start())
 	defer statsPusher.Close()
 
@@ -881,16 +844,16 @@ func TestORM_AllSyncEvents(t *testing.T) {
 
 	oldIncompleteRun := cltest.NewJobRun(job)
 	oldIncompleteRun.SetStatus(models.RunStatusInProgress)
-	err = orm.CreateJobRun(&oldIncompleteRun)
+	err = store.CreateJobRun(&oldIncompleteRun)
 	require.NoError(t, err)
 
 	newCompletedRun := cltest.NewJobRun(job)
 	newCompletedRun.SetStatus(models.RunStatusCompleted)
-	err = orm.CreateJobRun(&newCompletedRun)
+	err = store.CreateJobRun(&newCompletedRun)
 	require.NoError(t, err)
 
 	events := []models.SyncEvent{}
-	err = orm.AllSyncEvents(func(event models.SyncEvent) error {
+	err = statsPusher.AllSyncEvents(func(event models.SyncEvent) error {
 		events = append(events, event)
 		return nil
 	})
@@ -1138,7 +1101,7 @@ func TestORM_EthTransactionsWithAttempts(t *testing.T) {
 	store, cleanup := cltest.NewStore(t)
 	defer cleanup()
 
-	from := cltest.GetAccountAddress(t, store)
+	from := cltest.DefaultKeyAddress
 	cltest.MustInsertConfirmedEthTxWithAttempt(t, store, 0, 1, from)        // tx1
 	tx2 := cltest.MustInsertConfirmedEthTxWithAttempt(t, store, 1, 2, from) // tx2
 

@@ -3,7 +3,10 @@ import { v2 } from 'api'
 import { Route, RouteComponentProps, Switch } from 'react-router-dom'
 import { useErrorHandler } from 'hooks/useErrorHandler'
 import { useLoadingPlaceholder } from 'hooks/useLoadingPlaceholder'
-import jobSpecDefinition from 'utils/jobSpecDefinition'
+import {
+  generateJSONDefinition,
+  generateTOMLDefinition,
+} from './generateJobSpecDefinition'
 import { PaginatedApiResponse } from '@chainlink/json-api-client'
 import { OcrJobRun, RunStatus } from 'core/store/models'
 import { JobData } from './sharedTypes'
@@ -11,6 +14,7 @@ import { JobsDefinition } from './Definition'
 import { JobsErrors } from './Errors'
 import { RecentRuns } from './RecentRuns'
 import { RegionalNav } from './RegionalNav'
+import { Runs as JobRuns } from './Runs'
 
 type Props = RouteComponentProps<{
   jobSpecId: string
@@ -45,49 +49,49 @@ export const JobsShow: React.FC<Props> = ({ match }) => {
   //  as it doesn't have the behaviour we want.
   const isOcrJob = !isNaN((jobSpecId as unknown) as number)
 
-  const getJobSpecRuns = React.useCallback(() => {
-    if (isOcrJob) {
-      return v2.ocrRuns
-        .getJobSpecRuns({
-          jobSpecId,
-          page: DEFAULT_PAGE,
-          size: RECENT_RUNS_COUNT,
-        })
-        .then((jobSpecRunsResponse) => {
-          setState((s) => ({
-            ...s,
-            recentRuns: jobSpecRunsResponse.data.map((jobRun) => ({
-              createdAt: jobRun.attributes.createdAt,
-              id: jobRun.id,
-              status: getOcrJobStatus(jobRun),
-              jobId: jobSpecId,
-            })),
-            recentRunsCount: jobSpecRunsResponse.meta.count,
-          }))
-        })
-        .catch(setError)
-    } else {
-      return v2.runs
-        .getJobSpecRuns({
-          jobSpecId,
-          page: DEFAULT_PAGE,
-          size: RECENT_RUNS_COUNT,
-        })
-        .then((jobSpecRunsResponse) => {
-          setState((s) => ({
-            ...s,
-            recentRuns: jobSpecRunsResponse.data.map((jobRun) => ({
-              createdAt: jobRun.attributes.createdAt,
-              id: jobRun.id,
-              status: jobRun.attributes.status,
-              jobId: jobSpecId,
-            })),
-            recentRunsCount: jobSpecRunsResponse.meta.count,
-          }))
-        })
-        .catch(setError)
-    }
-  }, [isOcrJob, jobSpecId, setError])
+  const getJobSpecRuns = React.useCallback(
+    ({ page = DEFAULT_PAGE, size = RECENT_RUNS_COUNT } = {}) => {
+      const requestParams = {
+        jobSpecId,
+        page,
+        size,
+      }
+      if (isOcrJob) {
+        return v2.ocrRuns
+          .getJobSpecRuns(requestParams)
+          .then((jobSpecRunsResponse) => {
+            setState((s) => ({
+              ...s,
+              recentRuns: jobSpecRunsResponse.data.map((jobRun) => ({
+                createdAt: jobRun.attributes.createdAt,
+                id: jobRun.id,
+                status: getOcrJobStatus(jobRun),
+                jobId: jobSpecId,
+              })),
+              recentRunsCount: jobSpecRunsResponse.meta.count,
+            }))
+          })
+          .catch(setError)
+      } else {
+        return v2.runs
+          .getJobSpecRuns(requestParams)
+          .then((jobSpecRunsResponse) => {
+            setState((s) => ({
+              ...s,
+              recentRuns: jobSpecRunsResponse.data.map((jobRun) => ({
+                createdAt: jobRun.attributes.createdAt,
+                id: jobRun.id,
+                status: jobRun.attributes.status,
+                jobId: jobSpecId,
+              })),
+              recentRunsCount: jobSpecRunsResponse.meta.count,
+            }))
+          })
+          .catch(setError)
+      }
+    },
+    [isOcrJob, jobSpecId, setError],
+  )
 
   const getJobSpec = React.useCallback(async () => {
     if (isOcrJob) {
@@ -100,9 +104,10 @@ export const JobsShow: React.FC<Props> = ({ match }) => {
             jobSpec,
             job: {
               ...jobSpec.attributes.offChainReportingOracleSpec,
+              ...jobSpec.attributes.pipelineSpec,
               id: jobSpec.id,
               errors: jobSpec.attributes.errors,
-              definition: undefined,
+              definition: generateTOMLDefinition(jobSpec.attributes),
               type: 'Off-chain reporting',
             },
           }))
@@ -119,11 +124,8 @@ export const JobsShow: React.FC<Props> = ({ match }) => {
             job: {
               ...jobSpec.attributes,
               id: jobSpec.id,
-              definition: jobSpecDefinition({
-                ...jobSpec,
-                ...jobSpec.attributes,
-              }),
               type: 'Direct request',
+              definition: generateJSONDefinition(jobSpec.attributes),
             },
           }))
         })
@@ -141,6 +143,7 @@ export const JobsShow: React.FC<Props> = ({ match }) => {
         jobSpecId={jobSpecId}
         job={job}
         getJobSpecRuns={getJobSpecRuns}
+        runsCount={state.recentRunsCount}
       />
       <Switch>
         <Route
@@ -167,6 +170,20 @@ export const JobsShow: React.FC<Props> = ({ match }) => {
                 error,
                 getJobSpec,
                 setState,
+              }}
+            />
+          )}
+        />
+        <Route
+          path={`${match.path}/runs`}
+          render={() => (
+            <JobRuns
+              {...{
+                ...state,
+                error,
+                ErrorComponent,
+                LoadingPlaceholder,
+                getJobSpecRuns,
               }}
             />
           )}
