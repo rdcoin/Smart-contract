@@ -46,18 +46,18 @@ describe('Flags', () => {
       'lowerFlags',
       'raiseFlag',
       'raiseFlags',
-      'raisingAccessController',
+      's_raisingAccessController',
       'setRaisingAccessController',
       // Ownable methods:
       'acceptOwnership',
-      'owner',
+      's_owner',
       'transferOwnership',
       // AccessControl methods:
       'addAccess',
       'disableAccessCheck',
       'enableAccessCheck',
       'removeAccess',
-      'checkEnabled',
+      's_checkEnabled',
       'hasAccess',
     ])
   })
@@ -140,7 +140,7 @@ describe('Flags', () => {
         )
         assert.equal(
           '0x0000000000000000000000000000000000000000',
-          await flags.raisingAccessController(),
+          await flags.s_raisingAccessController(),
         )
       })
 
@@ -235,7 +235,7 @@ describe('Flags', () => {
         )
         assert.equal(
           '0x0000000000000000000000000000000000000000',
-          await flags.raisingAccessController(),
+          await flags.s_raisingAccessController(),
         )
       })
 

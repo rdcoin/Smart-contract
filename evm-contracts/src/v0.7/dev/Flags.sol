@@ -16,9 +16,9 @@ import "../interfaces/FlagsInterface.sol";
  */
 contract Flags is FlagsInterface, SimpleReadAccessController {
 
-  AccessControllerInterface public raisingAccessController;
+  AccessControllerInterface public s_raisingAccessController;
 
-  mapping(address => bool) private flags;
+  mapping(address => bool) private s_flags;
 
   event FlagRaised(
     address indexed subject
@@ -55,7 +55,7 @@ contract Flags is FlagsInterface, SimpleReadAccessController {
     checkAccess()
     returns (bool)
   {
-    return flags[subject];
+    return s_flags[subject];
   }
 
   /**
@@ -73,7 +73,7 @@ contract Flags is FlagsInterface, SimpleReadAccessController {
   {
     bool[] memory responses = new bool[](subjects.length);
     for (uint256 i = 0; i < subjects.length; i++) {
-      responses[i] = flags[subjects[i]];
+      responses[i] = s_flags[subjects[i]];
     }
     return responses;
   }
@@ -122,8 +122,8 @@ contract Flags is FlagsInterface, SimpleReadAccessController {
     for (uint256 i = 0; i < subjects.length; i++) {
       address subject = subjects[i];
 
-      if (flags[subject]) {
-        flags[subject] = false;
+      if (s_flags[subject]) {
+        s_flags[subject] = false;
         emit FlagLowered(subject);
       }
     }
@@ -140,10 +140,10 @@ contract Flags is FlagsInterface, SimpleReadAccessController {
     override
     onlyOwner()
   {
-    address previous = address(raisingAccessController);
+    address previous = address(s_raisingAccessController);
 
     if (previous != racAddress) {
-      raisingAccessController = AccessControllerInterface(racAddress);
+      s_raisingAccessController = AccessControllerInterface(racAddress);
 
       emit RaisingAccessControllerUpdated(previous, racAddress);
     }
@@ -157,15 +157,15 @@ contract Flags is FlagsInterface, SimpleReadAccessController {
     view
     returns (bool)
   {
-    return msg.sender == owner ||
-      raisingAccessController.hasAccess(msg.sender, msg.data);
+    return msg.sender == s_owner ||
+      s_raisingAccessController.hasAccess(msg.sender, msg.data);
   }
 
   function tryToRaiseFlag(address subject)
     private
   {
-    if (!flags[subject]) {
-      flags[subject] = true;
+    if (!s_flags[subject]) {
+      s_flags[subject] = true;
       emit FlagRaised(subject);
     }
   }

@@ -15,10 +15,10 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     uint16 id;
     AggregatorV2V3Interface aggregator;
   }
-  Phase private currentPhase;
-  AggregatorV2V3Interface public proposedAggregator;
-  mapping(uint16 => AggregatorV2V3Interface) public phaseAggregators;
-
+  AggregatorV2V3Interface public s_proposedAggregator;
+  mapping(uint16 => AggregatorV2V3Interface) public s_phaseAggregators;
+  Phase private s_currentPhase;
+  
   uint256 constant private PHASE_OFFSET = 64;
   uint256 constant private PHASE_SIZE = 16;
   uint256 constant private MAX_ID = 2**(PHASE_OFFSET+PHASE_SIZE) - 1;
@@ -42,7 +42,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (int256 answer)
   {
-    return currentPhase.aggregator.latestAnswer();
+    return s_currentPhase.aggregator.latestAnswer();
   }
 
   /**
@@ -60,7 +60,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (uint256 updatedAt)
   {
-    return currentPhase.aggregator.latestTimestamp();
+    return s_currentPhase.aggregator.latestTimestamp();
   }
 
   /**
@@ -82,7 +82,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     if (roundId > MAX_ID) return 0;
 
     (uint16 phaseId, uint64 aggregatorRoundId) = parseIds(roundId);
-    AggregatorV2V3Interface aggregator = phaseAggregators[phaseId];
+    AggregatorV2V3Interface aggregator = s_phaseAggregators[phaseId];
     if (address(aggregator) == address(0)) return 0;
 
     return aggregator.getAnswer(aggregatorRoundId);
@@ -107,7 +107,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     if (roundId > MAX_ID) return 0;
 
     (uint16 phaseId, uint64 aggregatorRoundId) = parseIds(roundId);
-    AggregatorV2V3Interface aggregator = phaseAggregators[phaseId];
+    AggregatorV2V3Interface aggregator = s_phaseAggregators[phaseId];
     if (address(aggregator) == address(0)) return 0;
 
     return aggregator.getTimestamp(aggregatorRoundId);
@@ -130,7 +130,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (uint256 roundId)
   {
-    Phase memory phase = currentPhase; // cache storage reads
+    Phase memory phase = s_currentPhase; // cache storage reads
     return addPhase(phase.id, uint64(phase.aggregator.latestRound()));
   }
 
@@ -180,7 +180,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
       uint256 startedAt,
       uint256 updatedAt,
       uint80 ansIn
-    ) = phaseAggregators[phaseId].getRoundData(aggregatorRoundId);
+    ) = s_phaseAggregators[phaseId].getRoundData(aggregatorRoundId);
 
     return addPhaseIds(id, answer, startedAt, updatedAt, ansIn, phaseId);
   }
@@ -220,7 +220,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
       uint80 answeredInRound
     )
   {
-    Phase memory current = currentPhase; // cache storage reads
+    Phase memory current = s_currentPhase; // cache storage reads
 
     (
       uint80 id,
@@ -258,7 +258,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
       uint80 answeredInRound
     )
   {
-    return proposedAggregator.getRoundData(roundId);
+    return s_proposedAggregator.getRoundData(roundId);
   }
 
   /**
@@ -285,7 +285,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
       uint80 answeredInRound
     )
   {
-    return proposedAggregator.latestRoundData();
+    return s_proposedAggregator.latestRoundData();
   }
 
   /**
@@ -296,7 +296,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     view
     returns (address)
   {
-    return address(currentPhase.aggregator);
+    return address(s_currentPhase.aggregator);
   }
 
   /**
@@ -307,7 +307,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     view
     returns (uint16)
   {
-    return currentPhase.id;
+    return s_currentPhase.id;
   }
 
   /**
@@ -319,7 +319,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (uint8)
   {
-    return currentPhase.aggregator.decimals();
+    return s_currentPhase.aggregator.decimals();
   }
 
   /**
@@ -332,7 +332,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (uint256)
   {
-    return currentPhase.aggregator.version();
+    return s_currentPhase.aggregator.version();
   }
 
   /**
@@ -344,7 +344,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     override
     returns (string memory)
   {
-    return currentPhase.aggregator.description();
+    return s_currentPhase.aggregator.description();
   }
 
   /**
@@ -355,7 +355,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     external
     onlyOwner()
   {
-    proposedAggregator = AggregatorV2V3Interface(aggregatorAddress);
+    s_proposedAggregator = AggregatorV2V3Interface(aggregatorAddress);
   }
 
   /**
@@ -369,8 +369,8 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
     external
     onlyOwner()
   {
-    require(aggregatorAddress == address(proposedAggregator), "Invalid proposed aggregator");
-    delete proposedAggregator;
+    require(aggregatorAddress == address(s_proposedAggregator), "Invalid proposed aggregator");
+    delete s_proposedAggregator;
     setAggregator(aggregatorAddress);
   }
 
@@ -382,9 +382,9 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
   function setAggregator(address aggregatorAddress)
     internal
   {
-    uint16 id = currentPhase.id + 1;
-    currentPhase = Phase(id, AggregatorV2V3Interface(aggregatorAddress));
-    phaseAggregators[id] = AggregatorV2V3Interface(aggregatorAddress);
+    uint16 id = s_currentPhase.id + 1;
+    s_currentPhase = Phase(id, AggregatorV2V3Interface(aggregatorAddress));
+    s_phaseAggregators[id] = AggregatorV2V3Interface(aggregatorAddress);
   }
 
   function addPhase(
@@ -437,7 +437,7 @@ contract AggregatorProxy is AggregatorV2V3Interface, Owned {
    */
 
   modifier hasProposal() {
-    require(address(proposedAggregator) != address(0), "No proposed aggregator present");
+    require(address(s_proposedAggregator) != address(0), "No proposed aggregator present");
     _;
   }
 

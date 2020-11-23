@@ -45,23 +45,23 @@ describe('DeviationFlaggingValidator', () => {
   it('has a limited public interface', () => {
     matchers.publicAbi(validatorFactory, [
       'THRESHOLD_MULTIPLIER',
-      'flaggingThreshold',
-      'flags',
+      's_flaggingThreshold',
+      's_flags',
       'isValid',
       'setFlagsAddress',
       'setFlaggingThreshold',
       'validate',
       // Owned methods:
       'acceptOwnership',
-      'owner',
+      's_owner',
       'transferOwnership',
     ])
   })
 
   describe('#constructor', () => {
     it('sets the arguments passed in', async () => {
-      assert.equal(flags.address, await validator.flags())
-      matchers.bigNum(flaggingThreshold, await validator.flaggingThreshold())
+      assert.equal(flags.address, await validator.s_flags())
+      matchers.bigNum(flaggingThreshold, await validator.s_flaggingThreshold())
     })
   })
 
@@ -238,11 +238,11 @@ describe('DeviationFlaggingValidator', () => {
     const newThreshold = 777
 
     it('changes the flagging thresold', async () => {
-      assert.equal(flaggingThreshold, await validator.flaggingThreshold())
+      assert.equal(flaggingThreshold, await validator.s_flaggingThreshold())
 
       await validator.connect(personas.Carol).setFlaggingThreshold(newThreshold)
 
-      assert.equal(newThreshold, await validator.flaggingThreshold())
+      assert.equal(newThreshold, await validator.s_flaggingThreshold())
     })
 
     it('emits a log event only when actually changed', async () => {
@@ -283,11 +283,11 @@ describe('DeviationFlaggingValidator', () => {
     const newFlagsAddress = '0x0123456789012345678901234567890123456789'
 
     it('changes the flags address', async () => {
-      assert.equal(flags.address, await validator.flags())
+      assert.equal(flags.address, await validator.s_flags())
 
       await validator.connect(personas.Carol).setFlagsAddress(newFlagsAddress)
 
-      assert.equal(newFlagsAddress, await validator.flags())
+      assert.equal(newFlagsAddress, await validator.s_flags())
     })
 
     it('emits a log event only when actually changed', async () => {

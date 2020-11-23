@@ -74,7 +74,7 @@ describe('AggregatorFacade', () => {
 
   it('has a limited public interface', () => {
     matchers.publicAbi(aggregatorFacadeFactory, [
-      'aggregator',
+      's_aggregator',
       'decimals',
       'description',
       'getAnswer',

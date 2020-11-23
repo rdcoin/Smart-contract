@@ -25,17 +25,17 @@ describe('SimpleWriteAccessController', () => {
       'disableAccessCheck',
       'enableAccessCheck',
       'removeAccess',
-      'checkEnabled',
+      's_checkEnabled',
       // Owned
       'acceptOwnership',
-      'owner',
+      's_owner',
       'transferOwnership',
     ])
   })
 
   describe('#constructor', () => {
     it('defaults checkEnabled to true', async () => {
-      assert(await controller.checkEnabled())
+      assert(await controller.s_checkEnabled())
     })
   })
 
@@ -139,7 +139,7 @@ describe('SimpleWriteAccessController', () => {
           controller.connect(personas.Eddy).disableAccessCheck(),
           'Only callable by owner',
         )
-        assert.isTrue(await controller.checkEnabled())
+        assert.isTrue(await controller.s_checkEnabled())
       })
     })
 
@@ -150,7 +150,7 @@ describe('SimpleWriteAccessController', () => {
       })
 
       it('sets checkEnabled to false', async () => {
-        assert.isFalse(await controller.checkEnabled())
+        assert.isFalse(await controller.s_checkEnabled())
       })
 
       it('allows users with access', async () => {
