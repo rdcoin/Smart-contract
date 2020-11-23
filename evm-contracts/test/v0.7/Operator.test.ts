@@ -72,7 +72,7 @@ describe('Operator', () => {
       'withdrawable',
       // Ownable methods:
       'acceptOwnership',
-      'owner',
+      's_owner',
       'transferOwnership',
     ])
   })

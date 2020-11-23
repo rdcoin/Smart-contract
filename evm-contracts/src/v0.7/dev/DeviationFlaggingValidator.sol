@@ -17,8 +17,8 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
 
   uint32 constant public THRESHOLD_MULTIPLIER = 100000;
 
-  uint32 public flaggingThreshold;
-  FlagsInterface public flags;
+  uint32 public s_flaggingThreshold;
+  FlagsInterface public s_flags;
 
   event FlaggingThresholdUpdated(
     uint24 indexed previous,
@@ -69,7 +69,7 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
     returns (bool)
   {
     if (!isValid(previousRoundId, previousAnswer, roundId, answer)) {
-      flags.raiseFlag(msg.sender);
+      s_flags.raiseFlag(msg.sender);
       return false;
     }
 
@@ -102,7 +102,7 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
     (int256 ratio, bool ratioOk) = ratioNumerator.div(previousAnswer);
     (uint256 absRatio, bool absOk) = abs(ratio);
 
-    return changeOk && numOk && ratioOk && absOk && absRatio <= flaggingThreshold;
+    return changeOk && numOk && ratioOk && absOk && absRatio <= s_flaggingThreshold;
   }
 
   /**
@@ -115,10 +115,10 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
     public
     onlyOwner()
   {
-    uint24 previousFT = uint24(flaggingThreshold);
+    uint24 previousFT = uint24(s_flaggingThreshold);
 
     if (previousFT != newThreshold) {
-      flaggingThreshold = newThreshold;
+      s_flaggingThreshold = newThreshold;
 
       emit FlaggingThresholdUpdated(previousFT, newThreshold);
     }
@@ -132,10 +132,10 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
     public
     onlyOwner()
   {
-    address previous = address(flags);
+    address previous = address(s_flags);
 
     if (previous != flagsAddress) {
-      flags = FlagsInterface(flagsAddress);
+      s_flags = FlagsInterface(flagsAddress);
 
       emit FlagsAddressUpdated(previous, flagsAddress);
     }

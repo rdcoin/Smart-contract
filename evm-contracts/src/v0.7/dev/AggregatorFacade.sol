@@ -8,9 +8,10 @@ import "../interfaces/AggregatorV2V3Interface.sol";
  */
 contract AggregatorFacade is AggregatorV2V3Interface {
 
-  AggregatorInterface public aggregator;
-  uint8 public override decimals;
-  string public override description;
+  AggregatorInterface public s_aggregator;
+
+  uint8 private s_decimals;
+  string private s_description;
 
   uint256 constant public override version = 2;
 
@@ -23,9 +24,17 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     uint8 decimalPlaces,
     string memory feedDescription
   ) public {
-    aggregator = AggregatorInterface(aggregatorAddress);
-    decimals = decimalPlaces;
-    description = feedDescription;
+    s_aggregator = AggregatorInterface(aggregatorAddress);
+    s_decimals = decimalPlaces;
+    s_description = feedDescription;
+  }
+
+  function decimals() external override view returns (uint8) {
+    return s_decimals;
+  }
+
+  function description() external override view returns (string memory) {
+    return s_description;
   }
 
   /**
@@ -42,7 +51,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     override
     returns (uint256)
   {
-    return aggregator.latestRound();
+    return s_aggregator.latestRound();
   }
 
   /**
@@ -60,7 +69,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     override
     returns (int256)
   {
-    return aggregator.latestAnswer();
+    return s_aggregator.latestAnswer();
   }
 
   /**
@@ -78,7 +87,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     override
     returns (uint256)
   {
-    return aggregator.latestTimestamp();
+    return s_aggregator.latestTimestamp();
   }
 
   /**
@@ -108,7 +117,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
       uint80 answeredInRound
     )
   {
-    return getRoundDetails(uint80(aggregator.latestRound()));
+    return getRoundDetails(uint80(s_aggregator.latestRound()));
   }
 
   /**
@@ -127,7 +136,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     override
     returns (int256)
   {
-    return aggregator.getAnswer(roundId);
+    return s_aggregator.getAnswer(roundId);
   }
 
   /**
@@ -146,7 +155,7 @@ contract AggregatorFacade is AggregatorV2V3Interface {
     override
     returns (uint256)
   {
-    return aggregator.getTimestamp(roundId);
+    return s_aggregator.getTimestamp(roundId);
   }
 
   /**
@@ -196,8 +205,8 @@ contract AggregatorFacade is AggregatorV2V3Interface {
       uint80 answeredInRound
     )
   {
-    answer = aggregator.getAnswer(roundId);
-    updatedAt = uint64(aggregator.getTimestamp(roundId));
+    answer = s_aggregator.getAnswer(roundId);
+    updatedAt = uint64(s_aggregator.getTimestamp(roundId));
 
     require(updatedAt > 0, V3_NO_DATA_ERROR);
 

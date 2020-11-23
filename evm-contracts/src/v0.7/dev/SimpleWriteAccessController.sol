@@ -12,8 +12,8 @@ import "../interfaces/AccessControllerInterface.sol";
  */
 contract SimpleWriteAccessController is AccessControllerInterface, Owned {
 
-  bool public checkEnabled;
-  mapping(address => bool) internal accessList;
+  bool public s_checkEnabled;
+  mapping(address => bool) internal s_accessList;
 
   event AddedAccess(address user);
   event RemovedAccess(address user);
@@ -23,7 +23,7 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
   constructor()
     public
   {
-    checkEnabled = true;
+    s_checkEnabled = true;
   }
 
   /**
@@ -40,7 +40,7 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     override
     returns (bool)
   {
-    return accessList[user] || !checkEnabled;
+    return s_accessList[user] || !s_checkEnabled;
   }
 
   /**
@@ -51,8 +51,8 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     external
     onlyOwner()
   {
-    if (!accessList[user]) {
-      accessList[user] = true;
+    if (!s_accessList[user]) {
+      s_accessList[user] = true;
 
       emit AddedAccess(user);
     }
@@ -66,8 +66,8 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     external
     onlyOwner()
   {
-    if (accessList[user]) {
-      accessList[user] = false;
+    if (s_accessList[user]) {
+      s_accessList[user] = false;
 
       emit RemovedAccess(user);
     }
@@ -80,8 +80,8 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     external
     onlyOwner()
   {
-    if (!checkEnabled) {
-      checkEnabled = true;
+    if (!s_checkEnabled) {
+      s_checkEnabled = true;
 
       emit CheckAccessEnabled();
     }
@@ -94,8 +94,8 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
     external
     onlyOwner()
   {
-    if (checkEnabled) {
-      checkEnabled = false;
+    if (s_checkEnabled) {
+      s_checkEnabled = false;
 
       emit CheckAccessDisabled();
     }

@@ -35,7 +35,7 @@ describe('Owned', () => {
   it('has a limited public interface', () => {
     matchers.publicAbi(ownedTestHelperFactory, [
       'acceptOwnership',
-      'owner',
+      's_owner',
       'transferOwnership',
       // test helper public methods
       'modifierOnlyOwner',
@@ -46,7 +46,7 @@ describe('Owned', () => {
     it('assigns ownership to the deployer', async () => {
       const [actual, expected] = await Promise.all([
         owner.getAddress(),
-        owned.owner(),
+        owned.s_owner(),
       ])
 
       assert.equal(actual, expected)
