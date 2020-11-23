@@ -63,9 +63,7 @@ describe('AggregatorFacade', () => {
     request = oracle.decodeRunRequest(receipt.logs?.[3])
     await oc1
       .connect(roles.oracleNode)
-      .fulfillOracleRequest(
-        ...oracle.convertFufillParams(request, response),
-      )
+      .fulfillOracleRequest(...oracle.convertFufillParams(request, response))
   })
 
   beforeEach(async () => {
@@ -166,5 +164,4 @@ describe('AggregatorFacade', () => {
       })
     })
   })
-
 })
