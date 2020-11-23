@@ -43,6 +43,7 @@ contract DeviationFlaggingValidator is Owned, AggregatorValidatorInterface {
     uint24 threshold
   )
     public
+    Owned(msg.sender)
   {
     setFlagsAddress(flagsAddress);
     setFlaggingThreshold(threshold);

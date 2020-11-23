@@ -57,7 +57,7 @@ describe('ChainlinkOperatorFactory', () => {
       operator = await operatorFactory
         .connect(roles.defaultAccount)
         .attach(emittedAddress)
-      const ownerString = await operator.owner()
+      const ownerString = await operator.s_owner()
       assert.equal(ownerString, roles.oracleNode.address)
     })
   })

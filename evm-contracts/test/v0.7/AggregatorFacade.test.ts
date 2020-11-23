@@ -41,7 +41,9 @@ describe('AggregatorFacade', () => {
 
   const deployment = setup.snapshot(provider, async () => {
     link = await linkTokenFactory.connect(defaultAccount).deploy()
-    oc1 = await operatorFactory.connect(defaultAccount).deploy(link.address)
+    oc1 = await operatorFactory
+      .connect(defaultAccount)
+      .deploy(link.address, defaultAccount.address)
     await oc1.setFulfillmentPermission(roles.oracleNode.address, true)
     aggregator = await aggregatorFactory
       .connect(defaultAccount)

@@ -22,6 +22,7 @@ contract SimpleWriteAccessController is AccessControllerInterface, Owned {
 
   constructor()
     public
+    Owned(msg.sender)
   {
     s_checkEnabled = true;
   }

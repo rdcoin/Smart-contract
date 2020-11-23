@@ -19,7 +19,7 @@ contract Owned {
   );
 
   constructor(address newOwner) {
-    owner = newOwner;
+    s_owner = newOwner;
   }
 
   /**
