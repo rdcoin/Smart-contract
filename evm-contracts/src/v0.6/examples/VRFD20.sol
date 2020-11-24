@@ -2,6 +2,10 @@ pragma solidity 0.6.6;
 
 import "../VRFConsumerBase.sol";
 
+/**
+ * @notice A Chainlink VRF consumer which uses randomness to mimic the rolling
+ * of a 20 sided die
+ */
 contract VRFD20 is VRFConsumerBase {
     using SafeMathChainlink for uint;
 

@@ -2,10 +2,15 @@ pragma solidity 0.6.6;
 
 import "../VRFConsumerBase.sol";
 
+/**
+ * @notice A basic Chainlink VRF consumer which requests randomness,
+ * then emits the result in a `RandomnessGenerated` event.
+ */
 contract VRFBasic is VRFConsumerBase {
     
     bytes32 internal s_keyHash;
     uint256 internal s_fee;
+
     uint256 public s_randomResult;
 
     event RandomnessGenerated(bytes32 indexed requestId, uint256 randomness);
