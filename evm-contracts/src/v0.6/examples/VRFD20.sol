@@ -51,7 +51,7 @@ contract VRFD20 is VRFConsumerBase {
      */
     function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
-        return requestRandomness(s_keyHash, s_fee, userProvidedSeed);
+        requestId = requestRandomness(s_keyHash, s_fee, userProvidedSeed);
     }
 
     /**
@@ -71,8 +71,16 @@ contract VRFD20 is VRFConsumerBase {
 
     /**
      * @notice Convenience function to show the latest roll
+     * @dev Get the details from the latest roll of dice
+     *
+     * @return requestId
+     * @return result
      */
-    function latestRoll() public view returns (uint256 d20result) {
-        return d20Results[d20Results.length.sub(1)];
+    function latestRoll() public view returns (bytes32 requestId, uint256 result) {
+        Roll memory latest = s_results[s_results.length.sub(1)];
+        return (
+            latest.requestId,
+            latest.result
+        );
     }
 }
