@@ -2,14 +2,20 @@ pragma solidity 0.6.6;
 
 import "../VRFConsumerBase.sol";
 
-contract VRFBasic is VRFConsumerBase {
-    
+contract VRFD20 is VRFConsumerBase {
+    using SafeMathChainlink for uint;
+
+    struct Roll {
+        bytes32 requestId;
+        uint256 result;
+    }
+
     bytes32 internal s_keyHash;
     uint256 internal s_fee;
-    uint256 public s_randomResult;
+    Roll[] public s_results;
 
-    event RandomnessGenerated(bytes32 indexed requestId, uint256 randomness);
-    
+    event DiceRolled(bytes32 indexed requestId, uint256 result);
+
     /**
      * @notice Constructor inherits VRFConsumerBase
      *
@@ -31,32 +37,38 @@ contract VRFBasic is VRFConsumerBase {
         s_keyHash = keyHash;
         s_fee = fee;
     }
-    
+
     /**
-     * @notice Requests randomness from a user-provided seed.
+     * @notice Requests randomness from a user-provided seed
      * @dev This is only an example implementation and not necessarily suitable for mainnet.
      * @dev You must review your implementation details with extreme care.
-     * @dev This contract should own enough LINK to pay the fee.
      *
      * @param userProvidedSeed uint256 unpredictable seed
      */
-    function getRandomNumber(uint256 userProvidedSeed) public {
+    function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
-        requestRandomness(s_keyHash, s_fee, userProvidedSeed);
+        return requestRandomness(s_keyHash, s_fee, userProvidedSeed);
     }
 
     /**
      * @notice Callback function used by VRF Coordinator to return the random number
      * to this contract.
-     * @dev This is where you can do something with the resulting randomness.
+     * @dev This is where you do something with randomness!
      * @dev The VRF Coordinator will only send this function verified responses.
      *
      * @param requestId bytes32
      * @param randomness The random result returned by the oracle
      */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        s_randomResult = randomness;
-        // Do something with randomness here!
-        emit RandomnessGenerated(requestId, s_randomResult);
+        uint256 result = randomness.mod(20).add(1); // Simplified example
+        s_results.push(Roll(requestId, result));
+        emit DiceRolled(requestId, result);
+    }
+
+    /**
+     * @notice Convenience function to show the latest roll
+     */
+    function latestRoll() public view returns (uint256 d20result) {
+        return d20Results[d20Results.length.sub(1)];
     }
 }
