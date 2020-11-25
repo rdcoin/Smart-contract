@@ -7,12 +7,12 @@ import {
 import { assert } from 'chai'
 import { ethers } from 'ethers'
 import { BigNumber } from 'ethers/utils'
-import { MockV2AggregatorFactory } from '../../ethers/v0.7/MockV2AggregatorFactory'
-import { MockV3AggregatorFactory } from '../../ethers/v0.7/MockV3AggregatorFactory'
+import { MockV2AggregatorFactory } from '../../ethers/v0.6/MockV2AggregatorFactory'
+import { MockV3AggregatorFactory } from '../../ethers/v0.6/MockV3AggregatorFactory'
 import { AggregatorProxyFactory } from '../../ethers/v0.7/AggregatorProxyFactory'
-import { AggregatorFacadeFactory } from '../../ethers/v0.7/AggregatorFacadeFactory'
+import { AggregatorFacadeFactory } from '../../ethers/v0.6/AggregatorFacadeFactory'
 import { FluxAggregatorFactory } from '../../ethers/v0.6/FluxAggregatorFactory'
-import { ReverterFactory } from '../../ethers/v0.7/ReverterFactory'
+import { ReverterFactory } from '../../ethers/v0.6/ReverterFactory'
 
 let personas: setup.Personas
 let defaultAccount: ethers.Wallet
