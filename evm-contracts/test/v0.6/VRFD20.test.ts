@@ -44,6 +44,61 @@ describe('VRFD20', () => {
     await deployment()
   })
 
+  describe('#currentRollRequest', () => {
+    it('returns blank bytes32 when no current roll set', async () => {
+      const response = await vrfD20.currentRollRequest()
+      assert.equal(response, helpers.numToBytes32(0))
+    })
+
+    it('returns the correct requestId', async () => {
+      await vrfD20.rollDice(seed)
+      const response = await vrfD20.currentRollRequest()
+      assert.equal(response, requestId)
+    })
+  })
+
+  describe('#getResult', () => {
+    it('reverts when a number too high is used', async () => {
+      await matchers.evmRevert(async () => {
+        await vrfD20.getResult(99)
+      })
+    })
+
+    it('gets a previous result', async () => {
+      const randomness = 6
+      const modResult = (randomness % 20) + 1
+      await vrfD20.rollDice(seed)
+      await vrfCoordinator.callBackWithRandomness(
+        requestId,
+        randomness,
+        vrfD20.address,
+      )
+      const response = await vrfD20.getResult(0)
+      assert.equal(response[1].toString(), modResult.toString())
+    })
+  })
+
+  describe('#latestResult', () => {
+    it('reverts when there are no results', async () => {
+      await matchers.evmRevert(async () => {
+        await vrfD20.latestResult()
+      })
+    })
+
+    it('gets the latest result', async () => {
+      const randomness = 6
+      const modResult = (randomness % 20) + 1
+      await vrfD20.rollDice(seed)
+      await vrfCoordinator.callBackWithRandomness(
+        requestId,
+        randomness,
+        vrfD20.address,
+      )
+      const response = await vrfD20.latestResult()
+      assert.equal(response[1].toString(), modResult.toString())
+    })
+  })
+
   describe('#rollDice', () => {
     describe('failure', () => {
       it('reverts when LINK balance is zero', async () => {
@@ -115,6 +170,14 @@ describe('VRFD20', () => {
         assert.equal(response[1].toString(), modResult.toString())
       })
 
+      it('allows another roll', async () => {
+        const newSeed = 54321
+        const newRequestId =
+          '0x0f0da22fed81ba133214ec54546629a1fbc1c773a9ca8ca6bb2a6709738515df'
+        tx = await vrfD20.rollDice(newSeed)
+        const contractRequestId = await vrfD20.currentRollRequest()
+        assert.equal(contractRequestId, newRequestId)
+      })
     })
 
     describe('failure', () => {
