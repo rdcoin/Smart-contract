@@ -1,5 +1,6 @@
 import { contract, setup, helpers, matchers } from '@chainlink/test-helpers'
 import { assert } from 'chai'
+import { ContractTransaction } from 'ethers'
 import { VRFBasicFactory } from '../../ethers/v0.6/VRFBasicFactory'
 import { VRFCoordinatorMockFactory } from '../../ethers/v0.6/VRFCoordinatorMockFactory'
 
@@ -21,6 +22,9 @@ describe('VRFBasic', () => {
   const keyHash = helpers.toBytes32String('keyHash')
   const seed = 12345
 
+  const requestId =
+    '0x66f86cab16b057baa86d6171b59e4c356197fcebc0e2cd2a744fc2d2f4dacbfe'
+
   let link: contract.Instance<contract.LinkTokenFactory>
   let vrfCoordinator: contract.Instance<VRFCoordinatorMockFactory>
   let vrfBasic: contract.Instance<VRFBasicFactory>
@@ -41,43 +45,66 @@ describe('VRFBasic', () => {
   })
 
   describe('#getRandomNumber', () => {
-    it('revert when LINK balance is zero', async () => {
-      const vrfBasic2 = await vrfBasicFactory
-        .connect(roles.defaultAccount)
-        .deploy(vrfCoordinator.address, link.address, keyHash, fee)
-      await matchers.evmRevert(async () => {
-        await vrfBasic2.getRandomNumber(seed)
+    describe('failure', () => {
+      it('reverts when LINK balance is zero', async () => {
+        const vrfBasic2 = await vrfBasicFactory
+          .connect(roles.defaultAccount)
+          .deploy(vrfCoordinator.address, link.address, keyHash, fee)
+        await matchers.evmRevert(async () => {
+          await vrfBasic2.getRandomNumber(seed)
+        })
       })
     })
 
-    it('emits a RandomnessRequest from the Coordinator', async () => {
-      const tx = await vrfBasic.getRandomNumber(seed)
-      const log = await helpers.getLog(tx, 2)
-      const topics = log?.topics
-      assert.equal(helpers.evmWordToAddress(topics?.[1]), vrfBasic.address)
-      assert.equal(topics?.[2], keyHash)
-      assert.equal(topics?.[3], helpers.numToBytes32(seed))
+    describe('success', () => {
+      let tx: ContractTransaction
+      beforeEach(async () => {
+        tx = await vrfBasic.getRandomNumber(seed)
+      })
+
+      it('emits a RandomnessRequest from the Coordinator', async () => {
+        const log = await helpers.getLog(tx, 2)
+        const topics = log?.topics
+        assert.equal(helpers.evmWordToAddress(topics?.[1]), vrfBasic.address)
+        assert.equal(topics?.[2], keyHash)
+        assert.equal(topics?.[3], helpers.numToBytes32(seed))
+      })
+
+      it('sets the requestID', async () => {
+        const contractRequestId = await vrfBasic.s_requestId()
+        assert.equal(contractRequestId, requestId)
+      })
     })
   })
 
   describe('#fulfillRandomness', () => {
     const randomness = 98765
-    let requestId: string
+    let eventRequestId: string
     beforeEach(async () => {
       const tx = await vrfBasic.getRandomNumber(seed)
       const log = await helpers.getLog(tx, 3)
-      requestId = log?.topics?.[1]
+      eventRequestId = log?.topics?.[1]
     })
 
     describe('success', () => {
-      it('fulfills request with randomness', async () => {
-        const tx = await vrfCoordinator.callBackWithRandomness(
-          requestId,
+      let tx: ContractTransaction
+      beforeEach(async () => {
+        tx = await vrfCoordinator.callBackWithRandomness(
+          eventRequestId,
           randomness,
           vrfBasic.address,
         )
+      })
+
+      it('emits an event', async () => {
         const log = await helpers.getLog(tx, 0)
+        assert.equal(log?.topics[1], requestId)
         assert.equal(log?.topics[2], helpers.numToBytes32(randomness))
+      })
+
+      it('sets the randomness result', async () => {
+        const generatedRandomness = await vrfBasic.s_randomResult()
+        assert.equal(generatedRandomness.toString(), randomness.toString())
       })
     })
 
@@ -98,7 +125,7 @@ describe('VRFBasic', () => {
           .deploy(link.address)
 
         const tx = await vrfCoordinator2.callBackWithRandomness(
-          requestId,
+          eventRequestId,
           randomness,
           vrfBasic.address,
         )
