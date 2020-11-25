@@ -1,9 +1,4 @@
-import {
-  contract,
-  setup,
-  helpers,
-  matchers
-} from '@chainlink/test-helpers'
+import { contract, setup, helpers, matchers } from '@chainlink/test-helpers'
 import { assert } from 'chai'
 import { VRFBasicFactory } from '../../ethers/v0.6/VRFBasicFactory'
 import { VRFCoordinatorMockFactory } from '../../ethers/v0.6/VRFCoordinatorMockFactory'
@@ -23,7 +18,7 @@ beforeAll(async () => {
 describe('VRFBasic', () => {
   const deposit = helpers.toWei('1')
   const fee = helpers.toWei('0.1')
-  const keyHash = helpers.toBytes32String("keyHash")
+  const keyHash = helpers.toBytes32String('keyHash')
   const seed = 12345
 
   let link: contract.Instance<contract.LinkTokenFactory>
@@ -42,12 +37,12 @@ describe('VRFBasic', () => {
   })
 
   beforeEach(async () => {
-    await deployment();
+    await deployment()
   })
 
   describe('#getRandomNumber', () => {
     it('revert when LINK balance is zero', async () => {
-      let vrfBasic2 = await vrfBasicFactory
+      const vrfBasic2 = await vrfBasicFactory
         .connect(roles.defaultAccount)
         .deploy(vrfCoordinator.address, link.address, keyHash, fee)
       await matchers.evmRevert(async () => {
@@ -77,7 +72,9 @@ describe('VRFBasic', () => {
     describe('success', () => {
       it('fulfills request with randomness', async () => {
         const tx = await vrfCoordinator.callBackWithRandomness(
-          requestId, randomness, vrfBasic.address
+          requestId,
+          randomness,
+          vrfBasic.address,
         )
         const log = await helpers.getLog(tx, 0)
         assert.equal(log?.topics[2], helpers.numToBytes32(randomness))
@@ -87,19 +84,23 @@ describe('VRFBasic', () => {
     describe('failure', () => {
       it('does not fulfill when the wrong requestId is used', async () => {
         const tx = await vrfCoordinator.callBackWithRandomness(
-          helpers.toBytes32String("wrong request ID"), randomness, vrfBasic.address
+          helpers.toBytes32String('wrong request ID'),
+          randomness,
+          vrfBasic.address,
         )
         const logs = await helpers.getLogs(tx)
         assert.equal(logs.length, 0)
       })
 
       it('does not fulfill when fulfilled by the wrong VRFcoordinator', async () => {
-        let vrfCoordinator2 = await vrfCoordinatorMockFactory
+        const vrfCoordinator2 = await vrfCoordinatorMockFactory
           .connect(roles.defaultAccount)
           .deploy(link.address)
 
         const tx = await vrfCoordinator2.callBackWithRandomness(
-          requestId, randomness, vrfBasic.address
+          requestId,
+          randomness,
+          vrfBasic.address,
         )
         const logs = await helpers.getLogs(tx)
         assert.equal(logs.length, 0)
