@@ -1,14 +1,14 @@
 import { contract, setup, helpers, matchers } from '@chainlink/test-helpers'
 import { assert } from 'chai'
 import { ContractTransaction } from 'ethers'
-import { VRFBasicFactory } from '../../ethers/v0.6/VRFBasicFactory'
+import { VRFD20Factory } from '../../ethers/v0.6/VRFD20Factory'
 import { VRFCoordinatorMockFactory } from '../../ethers/v0.6/VRFCoordinatorMockFactory'
 
 let roles: setup.Roles
 const provider = setup.provider()
 const linkTokenFactory = new contract.LinkTokenFactory()
 const vrfCoordinatorMockFactory = new VRFCoordinatorMockFactory()
-const vrfBasicFactory = new VRFBasicFactory()
+const vrfD20Factory = new VRFD20Factory()
 
 beforeAll(async () => {
   const users = await setup.users(provider)
@@ -16,7 +16,7 @@ beforeAll(async () => {
   roles = users.roles
 })
 
-describe('VRFBasic', () => {
+describe('VRFD20', () => {
   const deposit = helpers.toWei('1')
   const fee = helpers.toWei('0.1')
   const keyHash = helpers.toBytes32String('keyHash')
@@ -27,31 +27,38 @@ describe('VRFBasic', () => {
 
   let link: contract.Instance<contract.LinkTokenFactory>
   let vrfCoordinator: contract.Instance<VRFCoordinatorMockFactory>
-  let vrfBasic: contract.Instance<VRFBasicFactory>
+  let vrfD20: contract.Instance<VRFD20Factory>
 
   const deployment = setup.snapshot(provider, async () => {
     link = await linkTokenFactory.connect(roles.defaultAccount).deploy()
     vrfCoordinator = await vrfCoordinatorMockFactory
       .connect(roles.defaultAccount)
       .deploy(link.address)
-    vrfBasic = await vrfBasicFactory
+    vrfD20 = await vrfD20Factory
       .connect(roles.defaultAccount)
       .deploy(vrfCoordinator.address, link.address, keyHash, fee)
-    await link.transfer(vrfBasic.address, deposit)
+    await link.transfer(vrfD20.address, deposit)
   })
 
   beforeEach(async () => {
     await deployment()
   })
 
-  describe('#getRandomNumber', () => {
+  describe('#rollDice', () => {
     describe('failure', () => {
       it('reverts when LINK balance is zero', async () => {
-        const vrfBasic2 = await vrfBasicFactory
+        const vrfD202 = await vrfD20Factory
           .connect(roles.defaultAccount)
           .deploy(vrfCoordinator.address, link.address, keyHash, fee)
         await matchers.evmRevert(async () => {
-          await vrfBasic2.getRandomNumber(seed)
+          await vrfD202.rollDice(seed)
+        })
+      })
+
+      it('reverts when a roll is already in progress', async () => {
+        await vrfD20.rollDice(seed)
+        await matchers.evmRevert(async () => {
+          await vrfD20.rollDice(seed)
         })
       })
     })
@@ -59,19 +66,19 @@ describe('VRFBasic', () => {
     describe('success', () => {
       let tx: ContractTransaction
       beforeEach(async () => {
-        tx = await vrfBasic.getRandomNumber(seed)
+        tx = await vrfD20.rollDice(seed)
       })
 
-      it('emits a RandomnessRequest from the VRFCoordinator', async () => {
+      it('emits a RandomnessRequest event from the VRFCoordinator', async () => {
         const log = await helpers.getLog(tx, 2)
         const topics = log?.topics
-        assert.equal(helpers.evmWordToAddress(topics?.[1]), vrfBasic.address)
+        assert.equal(helpers.evmWordToAddress(topics?.[1]), vrfD20.address)
         assert.equal(topics?.[2], keyHash)
         assert.equal(topics?.[3], helpers.numToBytes32(seed))
       })
 
-      it('sets the requestID', async () => {
-        const contractRequestId = await vrfBasic.s_requestId()
+      it('sets the currentRoll requestID', async () => {
+        const contractRequestId = await vrfD20.currentRollRequest()
         assert.equal(contractRequestId, requestId)
       })
     })
@@ -79,9 +86,10 @@ describe('VRFBasic', () => {
 
   describe('#fulfillRandomness', () => {
     const randomness = 98765
+    const modResult = (randomness % 20) + 1
     let eventRequestId: string
     beforeEach(async () => {
-      const tx = await vrfBasic.getRandomNumber(seed)
+      const tx = await vrfD20.rollDice(seed)
       const log = await helpers.getLog(tx, 3)
       eventRequestId = log?.topics?.[1]
     })
@@ -92,20 +100,21 @@ describe('VRFBasic', () => {
         tx = await vrfCoordinator.callBackWithRandomness(
           eventRequestId,
           randomness,
-          vrfBasic.address,
+          vrfD20.address,
         )
       })
 
-      it('emits a RandomnessGenerated event', async () => {
+      it('emits a DiceLanded event', async () => {
         const log = await helpers.getLog(tx, 0)
         assert.equal(log?.topics[1], requestId)
-        assert.equal(log?.topics[2], helpers.numToBytes32(randomness))
+        assert.equal(log?.topics[2], helpers.numToBytes32(modResult))
       })
 
-      it('sets the randomness result', async () => {
-        const generatedRandomness = await vrfBasic.s_randomResult()
-        assert.equal(generatedRandomness.toString(), randomness.toString())
+      it('sets the correct dice roll result', async () => {
+        const response = await vrfD20.latestResult()
+        assert.equal(response[1].toString(), modResult.toString())
       })
+
     })
 
     describe('failure', () => {
@@ -113,7 +122,7 @@ describe('VRFBasic', () => {
         const tx = await vrfCoordinator.callBackWithRandomness(
           helpers.toBytes32String('wrong request ID'),
           randomness,
-          vrfBasic.address,
+          vrfD20.address,
         )
         const logs = await helpers.getLogs(tx)
         assert.equal(logs.length, 0)
@@ -127,7 +136,7 @@ describe('VRFBasic', () => {
         const tx = await vrfCoordinator2.callBackWithRandomness(
           eventRequestId,
           randomness,
-          vrfBasic.address,
+          vrfD20.address,
         )
         const logs = await helpers.getLogs(tx)
         assert.equal(logs.length, 0)

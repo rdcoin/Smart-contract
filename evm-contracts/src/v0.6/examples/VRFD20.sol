@@ -16,9 +16,11 @@ contract VRFD20 is VRFConsumerBase {
 
     bytes32 internal s_keyHash;
     uint256 internal s_fee;
+    Roll public s_currentRoll;
     Roll[] public s_results;
 
-    event DiceRolled(bytes32 indexed requestId, uint256 result);
+    event DiceRolled(bytes32 indexed requestId);
+    event DiceLanded(bytes32 indexed requestId, uint256 indexed result);
 
     /**
      * @notice Constructor inherits VRFConsumerBase
@@ -51,7 +53,10 @@ contract VRFD20 is VRFConsumerBase {
      */
     function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
+        require(s_currentRoll.requestId == bytes32(0), "Roll in progress");
         requestId = requestRandomness(s_keyHash, s_fee, userProvidedSeed);
+        s_currentRoll = Roll(requestId, 0);
+        emit DiceRolled(requestId);
     }
 
     /**
@@ -64,23 +69,44 @@ contract VRFD20 is VRFConsumerBase {
      * @param randomness The random result returned by the oracle
      */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        uint256 result = randomness.mod(20).add(1); // Simplified example
-        s_results.push(Roll(requestId, result));
-        emit DiceRolled(requestId, result);
+        require(requestId == s_currentRoll.requestId, "Wrong requestId");
+        uint256 result = randomness.mod(20).add(1);
+        s_currentRoll.result = result;
+        s_results.push(s_currentRoll);
+        delete s_currentRoll;
+        emit DiceLanded(requestId, result);
     }
 
     /**
-     * @notice Convenience function to show the latest roll
-     * @dev Get the details from the latest roll of dice
+     * @notice Get the current roll in progress request ID
+     *
+     * @return requestId bytes32
+     */
+    function currentRollRequest() public view returns (bytes32 requestId) {
+        requestId = s_currentRoll.requestId;
+    }
+
+    /**
+     * @notice Convenience function to show the results of the latest roll
      *
      * @return requestId
      * @return result
      */
-    function latestRoll() public view returns (bytes32 requestId, uint256 result) {
-        Roll memory latest = s_results[s_results.length.sub(1)];
-        return (
-            latest.requestId,
-            latest.result
-        );
+    function latestResult() public view returns (bytes32 requestId, uint256 result) {
+        return getResult(s_results.length.sub(1));
+    }
+
+    /**
+     * @notice Show the results from a specific roll of the dice
+     * @param number uint256
+     *
+     * @return requestId
+     * @return result
+     */
+    function getResult(uint256 number) public view returns (bytes32 requestId, uint256 result) {
+        require(number < s_results.length, "Invalid result number");
+        Roll memory roll = s_results[number];
+        requestId = roll.requestId;
+        result = roll.result;
     }
 }
