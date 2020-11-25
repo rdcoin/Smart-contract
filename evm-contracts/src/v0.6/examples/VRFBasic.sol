@@ -11,9 +11,11 @@ contract VRFBasic is VRFConsumerBase {
     bytes32 internal s_keyHash;
     uint256 internal s_fee;
 
+    bytes32 public s_requestId;
     uint256 public s_randomResult;
 
-    event RandomnessGenerated(bytes32 indexed requestId, uint256 randomness);
+    event RandomnessRequested(bytes32 indexed requestId);
+    event RandomnessGenerated(bytes32 indexed requestId, uint256 indexed randomness);
     
     /**
      * @notice Constructor inherits VRFConsumerBase
@@ -47,7 +49,8 @@ contract VRFBasic is VRFConsumerBase {
      */
     function getRandomNumber(uint256 userProvidedSeed) public {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
-        requestRandomness(s_keyHash, s_fee, userProvidedSeed);
+        s_requestId = requestRandomness(s_keyHash, s_fee, userProvidedSeed);
+        emit RandomnessRequested(s_requestId);
     }
 
     /**
@@ -60,6 +63,7 @@ contract VRFBasic is VRFConsumerBase {
      * @param randomness The random result returned by the oracle
      */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
+        require(requestId == s_requestId, "Wrong requestID");
         s_randomResult = randomness;
         // Do something with randomness here!
         emit RandomnessGenerated(requestId, s_randomResult);

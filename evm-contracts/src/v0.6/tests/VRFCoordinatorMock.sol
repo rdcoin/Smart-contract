@@ -7,7 +7,7 @@ contract VRFCoordinatorMock {
 
 	LinkTokenInterface public LINK;
 
-	event RandomnessRequest(bytes32 keyHash, uint256 seed, uint256 fee, address sender);
+	event RandomnessRequest(address indexed sender, bytes32 indexed keyHash, uint256 indexed seed);
 
 	constructor(address linkAddress) public {
 		LINK = LinkTokenInterface(linkAddress);
@@ -18,7 +18,7 @@ contract VRFCoordinatorMock {
 		onlyLINK
 	{
 		(bytes32 keyHash, uint256 seed) = abi.decode(_data, (bytes32, uint256));
-		emit RandomnessRequest(keyHash, seed, fee, sender);
+		emit RandomnessRequest(sender, keyHash, seed);
 	}
 
 	function callBackWithRandomness(
@@ -27,8 +27,7 @@ contract VRFCoordinatorMock {
 		address consumerContract
 	) public {
 		VRFConsumerBase v;
-		bytes memory resp = abi.encodeWithSelector(
-		v.rawFulfillRandomness.selector, requestId, randomness);
+		bytes memory resp = abi.encodeWithSelector(v.rawFulfillRandomness.selector, requestId, randomness);
 		uint256 b = 206000;
 		require(gasleft() >= b, "not enough gas for consumer");
 		(bool success,) = consumerContract.call(resp);
