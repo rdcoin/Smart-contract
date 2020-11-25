@@ -13,16 +13,16 @@ import (
 	"github.com/smartcontractkit/chainlink/core/store/orm"
 )
 
-// OCRJobSpecsController manages OCR job spec requests.
-type OCRJobSpecsController struct {
+// EthRequestEventJobSpecsController manages OCR job spec requests.
+type EthRequestEventJobSpecsController struct {
 	App chainlink.Application
 }
 
 // Index lists all OCR job specs.
 // Example:
-// "GET <application>/ocr/specs"
-func (ocrjsc *OCRJobSpecsController) Index(c *gin.Context) {
-	jobs, err := ocrjsc.App.GetStore().ORM.OffChainReportingJobs()
+// "GET <application>/ethrequestevent/specs"
+func (erejsc *EthRequestEventJobSpecsController) Index(c *gin.Context) {
+	jobs, err := erejsc.App.GetStore().ORM.OffChainReportingJobs()
 	if err != nil {
 		jsonAPIError(c, http.StatusInternalServerError, err)
 		return
@@ -33,8 +33,8 @@ func (ocrjsc *OCRJobSpecsController) Index(c *gin.Context) {
 
 // Show returns the details of a OCR job spec.
 // Example:
-// "GET <application>/ocr/specs/:ID"
-func (ocrjsc *OCRJobSpecsController) Show(c *gin.Context) {
+// "GET <application>/ethrequestevent/specs/:ID"
+func (erejsc *EthRequestEventJobSpecsController) Show(c *gin.Context) {
 	jobSpec := models.JobSpecV2{}
 	err := jobSpec.SetID(c.Param("ID"))
 	if err != nil {
@@ -42,7 +42,7 @@ func (ocrjsc *OCRJobSpecsController) Show(c *gin.Context) {
 		return
 	}
 
-	jobSpec, err = ocrjsc.App.GetStore().ORM.FindOffChainReportingJob(jobSpec.ID)
+	jobSpec, err = erejsc.App.GetStore().ORM.FindOffChainReportingJob(jobSpec.ID)
 	if errors.Cause(err) == orm.ErrorNotFound {
 		jsonAPIError(c, http.StatusNotFound, errors.New("OCR job spec not found"))
 		return
@@ -58,8 +58,8 @@ func (ocrjsc *OCRJobSpecsController) Show(c *gin.Context) {
 
 // Create validates, saves and starts a new OCR job spec.
 // Example:
-// "POST <application>/ocr/specs"
-func (ocrjsc *OCRJobSpecsController) Create(c *gin.Context) {
+// "POST <application>/ethrequestevent/specs"
+func (erejsc *EthRequestEventJobSpecsController) Create(c *gin.Context) {
 	request := models.CreateOCRJobSpecRequest{}
 	if err := c.ShouldBindJSON(&request); err != nil {
 		jsonAPIError(c, http.StatusUnprocessableEntity, err)
@@ -70,13 +70,13 @@ func (ocrjsc *OCRJobSpecsController) Create(c *gin.Context) {
 		jsonAPIError(c, http.StatusBadRequest, err)
 		return
 	}
-	config := ocrjsc.App.GetStore().Config
+	config := erejsc.App.GetStore().Config
 	if jobSpec.JobType() == offchainreporting.JobType && !config.Dev() && !config.FeatureOffchainReporting() {
 		jsonAPIError(c, http.StatusNotImplemented, errors.New("The Offchain Reporting feature is disabled by configuration"))
 		return
 	}
 
-	jobID, err := ocrjsc.App.AddJobV2(c.Request.Context(), jobSpec, jobSpec.Name)
+	jobID, err := erejsc.App.AddJobV2(c.Request.Context(), jobSpec)
 	if err != nil {
 		if errors.Cause(err) == job.ErrNoSuchKeyBundle || errors.Cause(err) == job.ErrNoSuchPeerID || errors.Cause(err) == job.ErrNoSuchTransmitterAddress {
 			jsonAPIError(c, http.StatusBadRequest, err)
@@ -86,7 +86,7 @@ func (ocrjsc *OCRJobSpecsController) Create(c *gin.Context) {
 		return
 	}
 
-	job, err := ocrjsc.App.GetStore().ORM.FindOffChainReportingJob(jobID)
+	job, err := erejsc.App.GetStore().ORM.FindOffChainReportingJob(jobID)
 	if err != nil {
 		jsonAPIError(c, http.StatusInternalServerError, err)
 		return
@@ -97,8 +97,8 @@ func (ocrjsc *OCRJobSpecsController) Create(c *gin.Context) {
 
 // Delete soft deletes an OCR job spec.
 // Example:
-// "DELETE <application>/ocr/specs/:ID"
-func (ocrjsc *OCRJobSpecsController) Delete(c *gin.Context) {
+// "DELETE <application>/ethrequestevent/specs/:ID"
+func (erejsc *EthRequestEventJobSpecsController) Delete(c *gin.Context) {
 	jobSpec := models.JobSpecV2{}
 	err := jobSpec.SetID(c.Param("ID"))
 	if err != nil {
@@ -106,7 +106,7 @@ func (ocrjsc *OCRJobSpecsController) Delete(c *gin.Context) {
 		return
 	}
 
-	err = ocrjsc.App.DeleteJobV2(c.Request.Context(), jobSpec.ID)
+	err = erejsc.App.DeleteJobV2(c.Request.Context(), jobSpec.ID)
 	if errors.Cause(err) == orm.ErrorNotFound {
 		jsonAPIError(c, http.StatusNotFound, errors.New("JobSpec not found"))
 		return

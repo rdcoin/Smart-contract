@@ -21,7 +21,7 @@ import (
 	"gopkg.in/guregu/null.v4"
 )
 
-func TestOCRJobSpecsController_Create_ValidationFailure(t *testing.T) {
+func TestJobsController_Create_ValidationFailure(t *testing.T) {
 	var (
 		contractAddress    = cltest.NewEIP55Address()
 		monitoringEndpoint = "chain.link:101"
@@ -58,7 +58,7 @@ func TestOCRJobSpecsController_Create_ValidationFailure(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			_, client, cleanup := setupOCRJobSpecsControllerTests(t)
+			_, client, cleanup := setupJobsControllerTests(t)
 			defer cleanup()
 			sp := cltest.MinimalOCRNonBootstrapSpec(contractAddress, tc.ta, tc.pid, monitoringEndpoint, tc.kb)
 			body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
@@ -74,8 +74,8 @@ func TestOCRJobSpecsController_Create_ValidationFailure(t *testing.T) {
 	}
 }
 
-func TestOCRJobSpecsController_Create_HappyPath(t *testing.T) {
-	app, client, cleanup := setupOCRJobSpecsControllerTests(t)
+func TestJobsController_Create_HappyPath(t *testing.T) {
+	app, client, cleanup := setupJobsControllerTests(t)
 	defer cleanup()
 
 	body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
@@ -110,7 +110,7 @@ func TestOCRJobSpecsController_Create_HappyPath(t *testing.T) {
 	require.Equal(t, models.EIP55Address("0x613a38AC1659769640aaE063C651F48E0250454C"), job.OffchainreportingOracleSpec.ContractAddress)
 }
 
-func TestOCRJobSpecsController_Index_HappyPath(t *testing.T) {
+func TestJobsController_Index_HappyPath(t *testing.T) {
 	client, cleanup, ocrJobSpecFromFile, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
@@ -127,7 +127,7 @@ func TestOCRJobSpecsController_Index_HappyPath(t *testing.T) {
 	runOCRJobSpecAssertions(t, ocrJobSpecFromFile, ocrJobSpecs[0])
 }
 
-func TestOCRJobSpecsController_Show_HappyPath(t *testing.T) {
+func TestJobsController_Show_HappyPath(t *testing.T) {
 	client, cleanup, ocrJobSpecFromFile, jobID := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
@@ -142,7 +142,7 @@ func TestOCRJobSpecsController_Show_HappyPath(t *testing.T) {
 	runOCRJobSpecAssertions(t, ocrJobSpecFromFile, ocrJobSpec)
 }
 
-func TestOCRJobSpecsController_Show_InvalidID(t *testing.T) {
+func TestJobsController_Show_InvalidID(t *testing.T) {
 	client, cleanup, _, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
@@ -151,7 +151,7 @@ func TestOCRJobSpecsController_Show_InvalidID(t *testing.T) {
 	cltest.AssertServerResponse(t, response, http.StatusUnprocessableEntity)
 }
 
-func TestOCRJobSpecsController_Show_NonExistentID(t *testing.T) {
+func TestJobsController_Show_NonExistentID(t *testing.T) {
 	client, cleanup, _, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
@@ -182,7 +182,7 @@ func runOCRJobSpecAssertions(t *testing.T, ocrJobSpecFromFile offchainreporting.
 	assert.Contains(t, ocrJobSpecFromServer.OffchainreportingOracleSpec.UpdatedAt.String(), "20")
 }
 
-func setupOCRJobSpecsControllerTests(t *testing.T) (*cltest.TestApplication, cltest.HTTPClientCleaner, func()) {
+func setupJobsControllerTests(t *testing.T) (*cltest.TestApplication, cltest.HTTPClientCleaner, func()) {
 	t.Parallel()
 	app, cleanup := cltest.NewApplication(t, cltest.LenientEthMock)
 	require.NoError(t, app.Start())
