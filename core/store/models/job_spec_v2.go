@@ -14,8 +14,12 @@ import (
 )
 
 type (
+	IDEmbed struct {
+		ID int32 `json:"-" toml:"-"                 gorm:"primary_key"`
+	}
+
 	JobSpecV2 struct {
-		ID                            int32                        `json:"-" gorm:"primary_key"`
+		IDEmbed
 		OffchainreportingOracleSpecID int32                        `json:"-"`
 		OffchainreportingOracleSpec   *OffchainReportingOracleSpec `json:"offChainReportingOracleSpec" gorm:"save_association:true;association_autoupdate:true;association_autocreate:true"`
 		PipelineSpecID                int32                        `json:"-"`
@@ -36,12 +40,12 @@ type (
 		UpdatedAt   time.Time `json:"updatedAt"`
 	}
 
-	OCRJobRun struct {
+	JobRunV2 struct {
 		ID int64 `json:"-" gorm:"primary_key"`
 	}
 
 	PipelineSpec struct {
-		ID           int32     `json:"-" gorm:"primary_key"`
+		IDEmbed
 		DotDagSource string    `json:"dotDagSource"`
 		CreatedAt    time.Time `json:"-"`
 	}
@@ -49,7 +53,7 @@ type (
 	// TODO: remove pointers when upgrading to gormv2
 	// which has https://github.com/go-gorm/gorm/issues/2748 fixed.
 	OffchainReportingOracleSpec struct {
-		ID                                     int32          `json:"-" toml:"-"                 gorm:"primary_key"`
+		IDEmbed
 		ContractAddress                        EIP55Address   `json:"contractAddress" toml:"contractAddress"`
 		P2PPeerID                              PeerID         `json:"p2pPeerID" toml:"p2pPeerID"         gorm:"column:p2p_peer_id"`
 		P2PBootstrapPeers                      pq.StringArray `json:"p2pBootstrapPeers" toml:"p2pBootstrapPeers" gorm:"column:p2p_bootstrap_peers;type:text[]"`
@@ -66,19 +70,30 @@ type (
 		UpdatedAt                              time.Time      `json:"updatedAt" toml:"-"`
 	}
 
+	EthRequestEventSpec struct {
+		IDEmbed
+		ContractAddress EIP55Address `json:"contractAddress" toml:"contractAddress"`
+		CreatedAt       time.Time    `json:"createdAt" toml:"-"`
+		UpdatedAt       time.Time    `json:"updatedAt" toml:"-"`
+	}
+
 	PeerID peer.ID
 )
 
-func (js JobSpecV2) GetID() string {
-	return fmt.Sprintf("%v", js.ID)
+const (
+	EthRequestEventJobType = "ethrequestevent"
+)
+
+func (id IDEmbed) GetID() string {
+	return fmt.Sprintf("%v", id.ID)
 }
 
-func (js *JobSpecV2) SetID(value string) error {
+func (id IDEmbed) SetID(value string) error {
 	ID, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
 		return err
 	}
-	js.ID = int32(ID)
+	id.ID = int32(ID)
 	return nil
 }
 
@@ -99,11 +114,11 @@ func (p PeerID) String() string {
 	return peer.ID(p).String()
 }
 
-func (jr OCRJobRun) GetID() string {
+func (jr JobRunV2) GetID() string {
 	return fmt.Sprintf("%v", jr.ID)
 }
 
-func (jr *OCRJobRun) SetID(value string) error {
+func (jr *JobRunV2) SetID(value string) error {
 	ID, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
