@@ -9,15 +9,11 @@ import "../VRFConsumerBase.sol";
 contract VRFD20 is VRFConsumerBase {
     using SafeMathChainlink for uint;
 
-    struct Roll {
-        bytes32 requestId;
-        uint256 result;
-    }
-
     bytes32 internal s_keyHash;
     uint256 internal s_fee;
-    Roll public s_currentRoll;
-    Roll[] public s_results;
+
+    bool public s_rollInProgress;
+    uint256[] public s_results;
 
     event DiceRolled(bytes32 indexed requestId);
     event DiceLanded(bytes32 indexed requestId, uint256 indexed result);
@@ -53,9 +49,9 @@ contract VRFD20 is VRFConsumerBase {
      */
     function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
-        require(s_currentRoll.requestId == bytes32(0), "Roll in progress");
+        require(s_rollInProgress == false, "Roll in progress");
         requestId = requestRandomness(s_keyHash, s_fee, userProvidedSeed);
-        s_currentRoll = Roll(requestId, 0);
+        s_rollInProgress = true;
         emit DiceRolled(requestId);
     }
 
@@ -69,30 +65,18 @@ contract VRFD20 is VRFConsumerBase {
      * @param randomness The random result returned by the oracle
      */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        require(requestId == s_currentRoll.requestId, "Wrong requestId");
         uint256 result = randomness.mod(20).add(1);
-        s_currentRoll.result = result;
-        s_results.push(s_currentRoll);
-        delete s_currentRoll;
+        s_results.push(result);
+        s_rollInProgress = false;
         emit DiceLanded(requestId, result);
-    }
-
-    /**
-     * @notice Get the current roll in progress request ID
-     *
-     * @return requestId bytes32
-     */
-    function currentRollRequest() public view returns (bytes32 requestId) {
-        requestId = s_currentRoll.requestId;
     }
 
     /**
      * @notice Convenience function to show the results of the latest roll
      *
-     * @return requestId
      * @return result
      */
-    function latestResult() public view returns (bytes32 requestId, uint256 result) {
+    function latestResult() public view returns (uint256 result) {
         return getResult(s_results.length.sub(1));
     }
 
@@ -100,13 +84,10 @@ contract VRFD20 is VRFConsumerBase {
      * @notice Show the results from a specific roll of the dice
      * @param number uint256
      *
-     * @return requestId
      * @return result
      */
-    function getResult(uint256 number) public view returns (bytes32 requestId, uint256 result) {
+    function getResult(uint256 number) public view returns (uint256 result) {
         require(number < s_results.length, "Invalid result number");
-        Roll memory roll = s_results[number];
-        requestId = roll.requestId;
-        result = roll.result;
+        result = s_results[number];
     }
 }
