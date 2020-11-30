@@ -10,10 +10,10 @@ import "../Owned.sol";
 contract VRFD20 is VRFConsumerBase, Owned {
     using SafeMathChainlink for uint;
 
-    bytes32 public s_keyHash;
-    uint256 public s_fee;
-    bool public s_rollInProgress;
-    uint256[] public s_results;
+    bytes32 private s_keyHash;
+    uint256 private s_fee;
+    bool private s_rollInProgress;
+    uint256[] private s_results;
 
     event DiceRolled(bytes32 indexed requestId);
     event DiceLanded(bytes32 indexed requestId, uint256 indexed result);
@@ -65,12 +65,39 @@ contract VRFD20 is VRFConsumerBase, Owned {
     }
 
     /**
+     * @notice Get the current key hash
+     *
+     * @return bytes32
+     */
+    function keyHash() public view returns (bytes32) {
+        return s_keyHash;
+    }
+
+    /**
      * @notice Set the oracle fee for requesting randomness
      *
      * @param fee uint256
      */
     function setFee(uint256 fee) public onlyOwner {
         s_fee = fee;
+    }
+
+    /**
+     * @notice Get the current fee
+     *
+     * @return uint256
+     */
+    function fee() public view returns (uint256) {
+        return s_fee;
+    }
+
+    /**
+     * @notice Check whether a roll is currently in progress
+     *
+     * @return bool
+     */
+    function rollInProgress() public view returns (bool) {
+        return s_rollInProgress;
     }
 
     /**

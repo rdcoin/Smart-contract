@@ -54,10 +54,9 @@ describe('VRFD20', () => {
       'nonces',
       'rawFulfillRandomness',
       // VRFD20
-      's_keyHash',
-      's_fee',
-      's_rollInProgress',
-      's_results',
+      'keyHash',
+      'fee',
+      'rollInProgress',
       'rollDice',
       'setKeyHash',
       'setFee',
@@ -122,7 +121,7 @@ describe('VRFD20', () => {
     describe('success', () => {
       it('sets the key hash', async () => {
         await vrfD20.setKeyHash(newHash)
-        const actualHash = await vrfD20.s_keyHash()
+        const actualHash = await vrfD20.keyHash()
         assert.equal(actualHash, newHash)
       })
     })
@@ -142,7 +141,7 @@ describe('VRFD20', () => {
     describe('success', () => {
       it('sets the fee', async () => {
         await vrfD20.setFee(newFee)
-        const actualFee = await vrfD20.s_fee()
+        const actualFee = await vrfD20.fee()
         assert.equal(actualFee.toString(), newFee.toString())
       })
     })
@@ -188,7 +187,7 @@ describe('VRFD20', () => {
       })
 
       it('sets currentlyRolling to true', async () => {
-        const contractRequestId = await vrfD20.s_rollInProgress()
+        const contractRequestId = await vrfD20.rollInProgress()
         assert.equal(contractRequestId, true)
       })
     })
@@ -228,7 +227,7 @@ describe('VRFD20', () => {
       it('allows another roll', async () => {
         const newSeed = 54321
         tx = await vrfD20.rollDice(newSeed)
-        const contractRequestId = await vrfD20.s_rollInProgress()
+        const contractRequestId = await vrfD20.rollInProgress()
         assert.equal(contractRequestId, true)
       })
     })
