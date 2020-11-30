@@ -108,6 +108,46 @@ describe('VRFD20', () => {
     })
   })
 
+  describe('#setKeyHash', () => {
+    const newHash = helpers.toBytes32String('newhash')
+
+    describe('failure', () => {
+      it('reverts when called by a non-owner', async () => {
+        await matchers.evmRevert(async () => {
+          await vrfD20.connect(roles.stranger).setKeyHash(newHash)
+        })
+      })
+    })
+
+    describe('success', () => {
+      it('sets the key hash', async () => {
+        await vrfD20.setKeyHash(newHash)
+        const actualHash = await vrfD20.s_keyHash()
+        assert.equal(actualHash, newHash)
+      })
+    })
+  })
+
+  describe('#setFee', () => {
+    const newFee = 1234
+
+    describe('failure', () => {
+      it('reverts when called by a non-owner', async () => {
+        await matchers.evmRevert(async () => {
+          await vrfD20.connect(roles.stranger).setFee(newFee)
+        })
+      })
+    })
+
+    describe('success', () => {
+      it('sets the fee', async () => {
+        await vrfD20.setFee(newFee)
+        const actualFee = await vrfD20.s_fee()
+        assert.equal(actualFee.toString(), newFee.toString())
+      })
+    })
+  })
+
   describe('#rollDice', () => {
     describe('failure', () => {
       it('reverts when LINK balance is zero', async () => {
@@ -123,6 +163,12 @@ describe('VRFD20', () => {
         await vrfD20.rollDice(seed)
         await matchers.evmRevert(async () => {
           await vrfD20.rollDice(seed)
+        })
+      })
+
+      it('reverts when called by a non-owner', async () => {
+        await matchers.evmRevert(async () => {
+          await vrfD20.connect(roles.stranger).rollDice(seed)
         })
       })
     })
