@@ -569,7 +569,7 @@ func validateMonitoringURL(spec offchainreporting.OracleSpec) error {
 	return err
 }
 
-func ValidatedEthRequestEventSpec(tomlString string) (spec models.EthRequestEventSpec, err error) {
+func ValidatedEthRequestEventSpec(tomlString string) (spec EthRequestEventSpec, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = errors.Errorf("panicked with err %v", r)

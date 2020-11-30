@@ -12,6 +12,7 @@ import (
 	"github.com/smartcontractkit/chainlink/core/services/offchainreporting"
 	"github.com/smartcontractkit/chainlink/core/store/models"
 	"github.com/smartcontractkit/chainlink/core/store/orm"
+	"gopkg.in/guregu/null.v4"
 )
 
 // JobsController manages jobs
@@ -82,7 +83,7 @@ func (jc *JobsController) Create(c *gin.Context) {
 	switch genericJS.Type {
 	case string(offchainreporting.JobType):
 		jc.createOCR(c, request.TOML)
-	case string(services.EthRequestEventJobType):
+	case string(models.EthRequestEventJobType):
 		jc.createEthRequestEvent(c, request.TOML)
 	default:
 		jsonAPIError(c, http.StatusUnprocessableEntity, errors.Errorf("unknown job type: %s", genericJS.Type))
@@ -127,6 +128,23 @@ func (jc *JobsController) createEthRequestEvent(c *gin.Context, toml string) {
 		jsonAPIError(c, http.StatusBadRequest, err)
 		return
 	}
+	jobID, err := jc.App.AddJobV2(c.Request.Context(), jobSpec, jobSpec.Name)
+	if err != nil {
+		if errors.Cause(err) == job.ErrNoSuchKeyBundle || errors.Cause(err) == job.ErrNoSuchPeerID || errors.Cause(err) == job.ErrNoSuchTransmitterAddress {
+			jsonAPIError(c, http.StatusBadRequest, err)
+			return
+		}
+		jsonAPIError(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	job, err := jc.App.GetStore().ORM.FindOffChainReportingJob(jobID)
+	if err != nil {
+		jsonAPIError(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	jsonAPIResponse(c, job, "offChainReportingJobSpec")
 }
 
 // Delete soft deletes an OCR job spec.

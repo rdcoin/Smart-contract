@@ -9,7 +9,7 @@ import (
 // EthRequestEvent is a wrapper for `models.EthRequestEvent`, the DB
 // representation of the job spec. It fulfills the job.Spec interface
 // and has facilities for unmarshaling the pipeline DAG from the job spec text.
-type EthRequestEvent struct {
+type EthRequestEventSpec struct {
 	// TODO: Abstract these fields?
 	Type            string          `toml:"type"`
 	SchemaVersion   uint32          `toml:"schemaVersion"`

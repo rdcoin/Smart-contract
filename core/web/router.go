@@ -274,10 +274,10 @@ func v2Routes(app chainlink.Application, r *gin.RouterGroup) {
 		authv2.POST("/jobs", jc.Create)
 		authv2.DELETE("/jobs/:ID", jc.Delete)
 
-		ocrjrc := OCRJobRunsController{app}
-		authv2.GET("/jobs/:ID/runs", paginatedRequest(ocrjrc.Index))
-		authv2.GET("/jobs/:ID/runs/:runID", ocrjrc.Show)
-		authv2.POST("/jobs/:ID/runs", ocrjrc.Create)
+		jrc := JobRunsV2Controller{app}
+		authv2.GET("/jobs/:ID/runs", paginatedRequest(jrc.Index))
+		authv2.GET("/jobs/:ID/runs/:runID", jrc.Show)
+		authv2.POST("/jobs/:ID/runs", jrc.Create)
 	}
 
 	ping := PingController{app}
