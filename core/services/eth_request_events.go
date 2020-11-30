@@ -1,9 +1,10 @@
 package services
 
 import (
-	"github.com/guregu/null"
+	"github.com/smartcontractkit/chainlink/core/services/job"
 	"github.com/smartcontractkit/chainlink/core/services/pipeline"
 	"github.com/smartcontractkit/chainlink/core/store/models"
+	"gopkg.in/guregu/null.v4"
 )
 
 // EthRequestEvent is a wrapper for `models.EthRequestEvent`, the DB
@@ -16,7 +17,7 @@ type EthRequestEventSpec struct {
 	Name            null.String     `toml:"name"`
 	MaxTaskDuration models.Interval `toml:"maxTaskDuration"`
 
-	models.OffchainReportingOracleSpec
+	models.EthRequestEventSpec
 
 	// The `jobID` field exists to cache the ID from the jobs table that joins
 	// to the eth_request_events table.
@@ -30,4 +31,19 @@ type EthRequestEventSpec struct {
 	// called `.TasksInDependencyOrder()` which converts this node/edge data
 	// structure into task specs which can then be saved to the database.
 	Pipeline pipeline.TaskDAG `toml:"observationSource"`
+}
+
+// EthRequestEventSpec conforms to the job.Spec interface
+var _ job.Spec = EthRequestEventSpec{}
+
+func (spec EthRequestEventSpec) JobID() int32 {
+	return spec.jobID
+}
+
+func (spec EthRequestEventSpec) JobType() job.Type {
+	return models.EthRequestEventJobType
+}
+
+func (spec EthRequestEventSpec) TaskDAG() pipeline.TaskDAG {
+	return spec.Pipeline
 }

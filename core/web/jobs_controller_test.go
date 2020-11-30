@@ -61,10 +61,10 @@ func TestJobsController_Create_ValidationFailure(t *testing.T) {
 			_, client, cleanup := setupJobsControllerTests(t)
 			defer cleanup()
 			sp := cltest.MinimalOCRNonBootstrapSpec(contractAddress, tc.ta, tc.pid, monitoringEndpoint, tc.kb)
-			body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
+			body, _ := json.Marshal(models.CreateJobSpecRequest{
 				TOML: sp,
 			})
-			resp, cleanup := client.Post("/v2/ocr/specs", bytes.NewReader(body))
+			resp, cleanup := client.Post("/v2/specs", bytes.NewReader(body))
 			defer cleanup()
 			assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 			b, err := ioutil.ReadAll(resp.Body)
@@ -78,10 +78,10 @@ func TestJobsController_Create_HappyPath(t *testing.T) {
 	app, client, cleanup := setupJobsControllerTests(t)
 	defer cleanup()
 
-	body, _ := json.Marshal(models.CreateOCRJobSpecRequest{
+	body, _ := json.Marshal(models.CreateJobSpecRequest{
 		TOML: string(cltest.MustReadFile(t, "testdata/oracle-spec.toml")),
 	})
-	response, cleanup := client.Post("/v2/ocr/specs", bytes.NewReader(body))
+	response, cleanup := client.Post("/v2/specs", bytes.NewReader(body))
 	defer cleanup()
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
@@ -114,7 +114,7 @@ func TestJobsController_Index_HappyPath(t *testing.T) {
 	client, cleanup, ocrJobSpecFromFile, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
-	response, cleanup := client.Get("/v2/ocr/specs")
+	response, cleanup := client.Get("/v2/specs")
 	defer cleanup()
 	cltest.AssertServerResponse(t, response, http.StatusOK)
 
@@ -131,7 +131,7 @@ func TestJobsController_Show_HappyPath(t *testing.T) {
 	client, cleanup, ocrJobSpecFromFile, jobID := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
-	response, cleanup := client.Get("/v2/ocr/specs/" + fmt.Sprintf("%v", jobID))
+	response, cleanup := client.Get("/v2/specs/" + fmt.Sprintf("%v", jobID))
 	defer cleanup()
 	cltest.AssertServerResponse(t, response, http.StatusOK)
 
@@ -146,7 +146,7 @@ func TestJobsController_Show_InvalidID(t *testing.T) {
 	client, cleanup, _, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
-	response, cleanup := client.Get("/v2/ocr/specs/uuidLikeString")
+	response, cleanup := client.Get("/v2/specs/uuidLikeString")
 	defer cleanup()
 	cltest.AssertServerResponse(t, response, http.StatusUnprocessableEntity)
 }
@@ -155,7 +155,7 @@ func TestJobsController_Show_NonExistentID(t *testing.T) {
 	client, cleanup, _, _ := setupOCRJobSpecsWControllerTestsWithJob(t)
 	defer cleanup()
 
-	response, cleanup := client.Get("/v2/ocr/specs/999999999")
+	response, cleanup := client.Get("/v2/specs/999999999")
 	defer cleanup()
 	cltest.AssertServerResponse(t, response, http.StatusNotFound)
 }

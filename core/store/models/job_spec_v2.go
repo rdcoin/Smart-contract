@@ -88,12 +88,13 @@ func (id IDEmbed) GetID() string {
 	return fmt.Sprintf("%v", id.ID)
 }
 
-func (id IDEmbed) SetID(value string) error {
+func (id *IDEmbed) SetID(value string) error {
 	ID, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
 		return err
 	}
 	id.ID = int32(ID)
+	fmt.Println(id)
 	return nil
 }
 
@@ -182,3 +183,4 @@ func (s *OffchainReportingOracleSpec) BeforeSave() error {
 func (JobSpecV2) TableName() string                   { return "jobs" }
 func (JobSpecErrorV2) TableName() string              { return "job_spec_errors_v2" }
 func (OffchainReportingOracleSpec) TableName() string { return "offchainreporting_oracle_specs" }
+func (EthRequestEventSpec) TableName() string         { return "eth_request_event_specs" }

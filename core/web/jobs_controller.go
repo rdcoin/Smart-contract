@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,13 +25,14 @@ type JobsController struct {
 // Example:
 // "GET <application>/jobs"
 func (jc *JobsController) Index(c *gin.Context) {
-	jobs, err := jc.App.GetStore().ORM.OffChainReportingJobs()
+	jobs, err := jc.App.GetStore().ORM.JobsV2()
 	if err != nil {
 		jsonAPIError(c, http.StatusInternalServerError, err)
 		return
 	}
+	fmt.Println("Balls", jobs)
 
-	jsonAPIResponse(c, jobs, "offChainReportingJobSpec")
+	jsonAPIResponse(c, jobs, "jobs")
 }
 
 // Show returns the details of a job
@@ -149,7 +151,7 @@ func (jc *JobsController) createEthRequestEvent(c *gin.Context, toml string) {
 
 // Delete soft deletes an OCR job spec.
 // Example:
-// "DELETE <application>/ocr/specs/:ID"
+// "DELETE <application>/specs/:ID"
 func (jc *JobsController) Delete(c *gin.Context) {
 	jobSpec := models.JobSpecV2{}
 	err := jobSpec.SetID(c.Param("ID"))

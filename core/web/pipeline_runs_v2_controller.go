@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -70,6 +71,8 @@ func (jrc *JobRunsV2Controller) Create(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("BALLS", c.Param("ID"))
+	fmt.Println("BALLS", jobSpec.ID)
 	jobRunID, err := jrc.App.RunJobV2(c, jobSpec.ID, nil)
 
 	if err != nil {

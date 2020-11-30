@@ -576,7 +576,7 @@ func ValidatedEthRequestEventSpec(tomlString string) (spec EthRequestEventSpec, 
 		}
 	}()
 
-	var eres models.OffchainReportingOracleSpec
+	var eres models.EthRequestEventSpec
 	spec = EthRequestEventSpec{
 		Pipeline: *pipeline.NewTaskDAG(),
 	}
@@ -592,7 +592,7 @@ func ValidatedEthRequestEventSpec(tomlString string) (spec EthRequestEventSpec, 
 	if err != nil {
 		return spec, err
 	}
-	spec.OffchainReportingOracleSpec = eres
+	spec.EthRequestEventSpec = eres
 
 	if spec.Type != "ethrequestevent" {
 		return spec, errors.Errorf("unsupported type %s", spec.Type)

@@ -862,8 +862,8 @@ func (orm *ORM) JobsSorted(sort SortType, offset int, limit int) ([]models.JobSp
 	return jobs, count, err
 }
 
-// OffChainReportingJobs returns OCR job specs
-func (orm *ORM) OffChainReportingJobs() ([]models.JobSpecV2, error) {
+// OffChainReportingJobs returns job specs
+func (orm *ORM) JobsV2() ([]models.JobSpecV2, error) {
 	orm.MustEnsureAdvisoryLock()
 	var jobs []models.JobSpecV2
 	err := orm.DB.
