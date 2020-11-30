@@ -44,6 +44,28 @@ describe('VRFD20', () => {
     await deployment()
   })
 
+  it('has a limited public interface', () => {
+    matchers.publicAbi(vrfD20Factory, [
+      // Owned
+      'acceptOwnership',
+      'owner',
+      'transferOwnership',
+      //VRFConsumerBase
+      'nonces',
+      'rawFulfillRandomness',
+      // VRFD20
+      's_keyHash',
+      's_fee',
+      's_rollInProgress',
+      's_results',
+      'rollDice',
+      'setKeyHash',
+      'setFee',
+      'latestResult',
+      'getResult',
+    ])
+  })
+
   describe('#getResult', () => {
     it('reverts when a number too high is used', async () => {
       await matchers.evmRevert(async () => {
@@ -166,7 +188,6 @@ describe('VRFD20', () => {
     })
 
     describe('failure', () => {
-
       it('does not fulfill when fulfilled by the wrong VRFcoordinator', async () => {
         const vrfCoordinator2 = await vrfCoordinatorMockFactory
           .connect(roles.defaultAccount)
