@@ -1,17 +1,17 @@
 pragma solidity 0.6.6;
 
 import "../VRFConsumerBase.sol";
+import "../Owned.sol";
 
 /**
  * @notice A Chainlink VRF consumer which uses randomness to mimic the rolling
  * of a 20 sided die
  */
-contract VRFD20 is VRFConsumerBase {
+contract VRFD20 is VRFConsumerBase, Owned {
     using SafeMathChainlink for uint;
 
-    bytes32 internal s_keyHash;
-    uint256 internal s_fee;
-
+    bytes32 public s_keyHash;
+    uint256 public s_fee;
     bool public s_rollInProgress;
     uint256[] public s_results;
 
@@ -47,7 +47,7 @@ contract VRFD20 is VRFConsumerBase {
      *
      * @param userProvidedSeed uint256 unpredictable seed
      */
-    function rollDice(uint256 userProvidedSeed) public returns (bytes32 requestId) {
+    function rollDice(uint256 userProvidedSeed) public onlyOwner returns (bytes32 requestId) {
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK to pay fee");
         require(s_rollInProgress == false, "Roll in progress");
         requestId = requestRandomness(s_keyHash, s_fee, userProvidedSeed);
@@ -56,19 +56,21 @@ contract VRFD20 is VRFConsumerBase {
     }
 
     /**
-     * @notice Callback function used by VRF Coordinator to return the random number
-     * to this contract.
-     * @dev This is where you do something with randomness!
-     * @dev The VRF Coordinator will only send this function verified responses.
+     * @notice Set the key hash for the oracle
      *
-     * @param requestId bytes32
-     * @param randomness The random result returned by the oracle
+     * @param keyHash bytes32
      */
-    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        uint256 result = randomness.mod(20).add(1);
-        s_results.push(result);
-        s_rollInProgress = false;
-        emit DiceLanded(requestId, result);
+    function setKeyHash(bytes32 keyHash) public onlyOwner {
+        s_keyHash = keyHash;
+    }
+
+    /**
+     * @notice Set the oracle fee for requesting randomness
+     *
+     * @param fee uint256
+     */
+    function setFee(uint256 fee) public onlyOwner {
+        s_fee = fee;
     }
 
     /**
@@ -89,5 +91,21 @@ contract VRFD20 is VRFConsumerBase {
     function getResult(uint256 number) public view returns (uint256 result) {
         require(number < s_results.length, "Invalid result number");
         result = s_results[number];
+    }
+
+    /**
+     * @notice Callback function used by VRF Coordinator to return the random number
+     * to this contract.
+     * @dev This is where you do something with randomness!
+     * @dev The VRF Coordinator will only send this function verified responses.
+     *
+     * @param requestId bytes32
+     * @param randomness The random result returned by the oracle
+     */
+    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
+        uint256 result = randomness.mod(20).add(1);
+        s_results.push(result);
+        s_rollInProgress = false;
+        emit DiceLanded(requestId, result);
     }
 }
