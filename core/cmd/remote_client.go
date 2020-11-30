@@ -170,7 +170,7 @@ func (cli *Client) ShowJobSpec(c *clipkg.Context) (err error) {
 	if !c.Args().Present() {
 		return cli.errorOut(errors.New("Must pass the job id to be shown"))
 	}
-	resp, err := cli.HTTP.Get("/v2/jobs/" + c.Args().First())
+	resp, err := cli.HTTP.Get("/v2/specs/" + c.Args().First())
 	if err != nil {
 		return cli.errorOut(err)
 	}

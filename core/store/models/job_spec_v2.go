@@ -40,7 +40,7 @@ type (
 		UpdatedAt   time.Time `json:"updatedAt"`
 	}
 
-	JobRunV2 struct {
+	PipelineRun struct {
 		ID int64 `json:"-" gorm:"primary_key"`
 	}
 
@@ -115,16 +115,16 @@ func (p PeerID) String() string {
 	return peer.ID(p).String()
 }
 
-func (jr JobRunV2) GetID() string {
-	return fmt.Sprintf("%v", jr.ID)
+func (pr PipelineRun) GetID() string {
+	return fmt.Sprintf("%v", pr.ID)
 }
 
-func (jr *JobRunV2) SetID(value string) error {
+func (pr *PipelineRun) SetID(value string) error {
 	ID, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return err
 	}
-	jr.ID = int64(ID)
+	pr.ID = int64(ID)
 	return nil
 }
 

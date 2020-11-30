@@ -187,21 +187,19 @@ func NewApp(client *Client) *cli.App {
 			Usage: "Commands for managing Jobs (V2)",
 			Subcommands: []cli.Command{
 				{
-					{
-						Name:   "create",
-						Usage:  "Create a V2 job",
-						Action: client.CreateJobV2,
-					},
-					{
-						Name:   "delete",
-						Usage:  "Delete a V2 job",
-						Action: client.DeleteJobV2,
-					},
-					{
-						Name:   "run",
-						Usage:  "Trigger a V2 job run",
-						Action: client.TriggerJobRunV2,
-					},
+					Name:   "create",
+					Usage:  "Create a V2 job",
+					Action: client.CreateJobV2,
+				},
+				{
+					Name:   "delete",
+					Usage:  "Delete a V2 job",
+					Action: client.DeleteJobV2,
+				},
+				{
+					Name:   "run",
+					Usage:  "Trigger a V2 job run",
+					Action: client.TriggerJobRunV2,
 				},
 			},
 		},

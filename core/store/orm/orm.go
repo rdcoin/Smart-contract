@@ -888,8 +888,8 @@ func (orm *ORM) FindOffChainReportingJob(id int32) (models.JobSpecV2, error) {
 	return job, err
 }
 
-// OffChainReportingJobRuns returns OCR job runs
-func (orm *ORM) OffChainReportingJobRuns(jobID int32, offset, size int) ([]pipeline.Run, int, error) {
+// PipelineRunsByJobID returns pipeline runs for a job
+func (orm *ORM) PipelineRunsByJobID(jobID int32, offset, size int) ([]pipeline.Run, int, error) {
 	orm.MustEnsureAdvisoryLock()
 
 	var pipelineRuns []pipeline.Run

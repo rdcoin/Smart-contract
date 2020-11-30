@@ -38,7 +38,7 @@ func TestOCRJobRunsController_Create_HappyPath(t *testing.T) {
 	defer cleanup()
 	cltest.AssertServerResponse(t, response, http.StatusOK)
 
-	parsedResponse := models.JobRunV2{}
+	parsedResponse := models.PipelineRun{}
 	err = web.ParseJSONAPIResponse(cltest.ParseResponseBody(t, response), &parsedResponse)
 	assert.NoError(t, err)
 	assert.NotNil(t, parsedResponse.ID)
