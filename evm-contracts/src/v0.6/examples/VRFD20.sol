@@ -8,7 +8,6 @@ import "../Owned.sol";
  * of a 20 sided die
  */
 contract VRFD20 is VRFConsumerBase, Owned {
-    using SafeMathChainlink for uint;
 
     bytes32 private s_keyHash;
     uint256 private s_fee;
