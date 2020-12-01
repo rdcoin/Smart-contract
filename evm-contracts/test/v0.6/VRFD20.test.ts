@@ -89,7 +89,8 @@ describe('VRFD20', () => {
   describe('#latestResult', () => {
     it('reverts when there are no results', async () => {
       await matchers.evmRevert(async () => {
-        await vrfD20.latestResult()
+        await vrfD20.latestResult(),
+        'Invalid result number',
       })
     })
 
