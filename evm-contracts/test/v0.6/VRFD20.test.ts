@@ -68,7 +68,8 @@ describe('VRFD20', () => {
   describe('#getResult', () => {
     it('reverts when a number too high is used', async () => {
       await matchers.evmRevert(async () => {
-        await vrfD20.getResult(99)
+        await vrfD20.getResult(99),
+        'Invalid result number',
       })
     })
 
